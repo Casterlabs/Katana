@@ -58,8 +58,6 @@ public class ProxyServlet extends Servlet {
                     url += session.getQueryString();
                 }
 
-                System.out.println(url);
-
                 OkHttpClient client = new OkHttpClient().newBuilder().build();
                 Request.Builder builder = new Request.Builder().url(url);
 
