@@ -15,8 +15,8 @@ import lombok.Setter;
 @Data
 @Setter(AccessLevel.NONE)
 public class ServerConfiguration {
-    private List<Servlet> servlets = new ArrayList<>();
     private SSLConfiguration SSL = new SSLConfiguration();
+    private List<Servlet> servlets = new ArrayList<>();
     private boolean panel;
     private String name;
     private int port;
@@ -37,12 +37,21 @@ public class ServerConfiguration {
                 servlet.init(config);
 
                 if (config.has("hostname")) {
-                    servlet.getHosts().add(config.get("hostname").getAsString());
+                    String hostname = config.get("hostname").getAsString();
+                    servlet.getHosts().add(hostname);
+                    servlet.getAllowedHosts().add(hostname.replace(".", "\\.").replace("*", ".*"));
                 }
 
                 if (config.has("hostnames")) {
                     for (JsonElement hostname : config.getAsJsonArray("hostnames")) {
                         servlet.getHosts().add(hostname.getAsString());
+                        servlet.getAllowedHosts().add(hostname.getAsString().replace(".", "\\.").replace("*", ".*"));
+                    }
+                }
+
+                if (config.has("allowed_hosts")) {
+                    for (JsonElement hostname : config.getAsJsonArray("allowed_hosts")) {
+                        servlet.getAllowedHosts().add(hostname.getAsString().replace(".", "\\.").replace("*", ".*"));
                     }
                 }
 

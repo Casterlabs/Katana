@@ -46,6 +46,16 @@ public class Util {
         return ret;
     }
 
+    public static boolean regexContains(Collection<String> list, String in) {
+        for (String item : list) {
+            if (in.matches(item)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static Response errorResponse(Status status, String description, String host, int port) {
         // @formatter:off
         return NanoHTTPD.newFixedLengthResponse(status, "text/html", 

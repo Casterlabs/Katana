@@ -43,6 +43,7 @@ public class WebSocketProxyServlet extends Servlet {
 
                 if (this.config.include_path) {
                     url += session.getUri().replace(this.config.proxy_path.replace(".*", ""), "");
+                    url += session.getQueryString();
                 }
 
                 ClientWebSocketConnection client = new ClientWebSocketConnection(session.getSession(), url);

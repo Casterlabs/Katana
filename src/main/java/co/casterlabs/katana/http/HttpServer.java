@@ -164,7 +164,7 @@ public class HttpServer implements Server {
                     Response response = readResponse(session);
 
                     double time = (System.currentTimeMillis() - start) / 1000d;
-                    logger.debug("Served http %s %s (%.2fs)", session.getRemoteIpAddress(), session.getHost() + session.getUri(), time);
+                    logger.debug("Served HTTP %s %s %s (%.2fs)", session.getMethod().name(), session.getRemoteIpAddress(), session.getHost() + session.getUri(), time);
 
                     return response;
                 }
@@ -235,11 +235,22 @@ public class HttpServer implements Server {
                 }
             } else {
                 Collection<Servlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
-
-                // Iterate priority configs first, if they can't serve then attempt lower priority configs
                 boolean served = this.iterateConfigs(session, servlets);
 
-                if (!served) {
+                // Allow CORS
+                if (served && session.getHeader("Sec-Fetch-Mode").equalsIgnoreCase("cors")) {
+                    String[] split = session.getHeader("Referer").split("://");
+                    String protocol = split[0];
+                    String referer = split[1].split("/")[0]; // Strip protocol and uri
+
+                    for (Servlet servlet : servlets) {
+                        if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
+                            session.setResponseHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
+                            this.logger.debug("Set CORS header for %s", referer);
+                            break;
+                        }
+                    }
+                } else if (!served) {
                     if (!session.isWebsocketRequest()) {
                         this.logger.warn("No servlet for host %s.", host);
                     }

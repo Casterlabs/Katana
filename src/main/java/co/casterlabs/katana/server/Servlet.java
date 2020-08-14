@@ -11,6 +11,7 @@ import lombok.NonNull;
 
 @Getter
 public abstract class Servlet {
+    private List<String> allowedHosts = new ArrayList<>();
     private List<String> hosts = new ArrayList<>();
     private ServletType type;
     private String id;

@@ -69,22 +69,30 @@ public class HttpSession {
         return this.session.getMethod();
     }
 
+    public String getHeader(String header) {
+        return this.session.getHeaders().getOrDefault(header.toLowerCase(), "");
+    }
+
     public Map<String, List<String>> getParameters() {
         return this.session.getParameters();
     }
 
     public String getUri() {
         String uri = this.session.getUri();
-        
+
         if (uri.endsWith("/")) {
             uri = uri.substring(0, uri.length() - 1);
         }
-        
+
         return uri;
     }
 
     public String getRemoteIpAddress() {
         return this.session.getRemoteIpAddress();
+    }
+
+    public String getQueryString() {
+        return "?" + this.session.getQueryParameterString();
     }
 
     public void setResponseHeader(String key, String value) {
