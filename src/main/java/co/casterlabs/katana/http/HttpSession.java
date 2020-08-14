@@ -91,6 +91,10 @@ public class HttpSession {
         return this.session.getRemoteIpAddress();
     }
 
+    public boolean hasHeader(String header) {
+        return this.session.getHeaders().containsKey(header.toLowerCase());
+    }
+
     public String getQueryString() {
         return "?" + this.session.getQueryParameterString();
     }

@@ -238,7 +238,7 @@ public class HttpServer implements Server {
                 boolean served = this.iterateConfigs(session, servlets);
 
                 // Allow CORS
-                if (served && session.getHeader("Sec-Fetch-Mode").equalsIgnoreCase("cors")) {
+                if (served && session.getHeader("Sec-Fetch-Mode").equalsIgnoreCase("cors") && session.hasHeader("Referer")) {
                     String[] split = session.getHeader("Referer").split("://");
                     String protocol = split[0];
                     String referer = split[1].split("/")[0]; // Strip protocol and uri
