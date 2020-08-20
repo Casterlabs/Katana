@@ -9,8 +9,7 @@ public class SSLConfiguration {
     public boolean allow_insecure = true;
     public boolean force = false;
 
-    public String certificate;
-    public String private_key;
-    public String chain;
-
+    public String keystore;
+    public String keystore_password;
+    public String key_password;
 }

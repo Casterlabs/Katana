@@ -1,8 +1,10 @@
 package co.casterlabs.katana.http;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -11,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLServerSocketFactory;
 
 import org.apache.commons.collections4.MultiValuedMap;
@@ -77,18 +80,18 @@ public class HttpServer implements Server {
         SSLConfiguration ssl = config.getSSL();
         if ((ssl != null) && ssl.enabled) {
             try {
-                File certificate = new File(ssl.certificate);
-                File privateKey = new File(ssl.private_key);
-                File chain = new File(ssl.chain);
+                File certificate = new File(ssl.keystore);
 
                 if (!certificate.exists()) {
                     this.logger.severe("Unable to find SSL certificate file.");
-                } else if (!privateKey.exists()) {
-                    this.logger.severe("Unable to find SSL private key file.");
-                } else if (!chain.exists()) {
-                    this.logger.severe("Unable to find SSL chain/ca-bundle file.");
                 } else {
-                    SSLServerSocketFactory factory = SSLUtil.getSocketFactoryPEM(certificate, privateKey, chain);
+                    KeyStore keystore = KeyStore.getInstance("jks");
+                    keystore.load(new FileInputStream(certificate), ssl.keystore_password.toCharArray());
+
+                    KeyManagerFactory managerFactory = KeyManagerFactory.getInstance("SunX509");
+                    managerFactory.init(keystore, ssl.key_password.toCharArray());
+
+                    SSLServerSocketFactory factory = NanoHTTPD.makeSSLSocketFactory(keystore, managerFactory);
 
                     this.nanoSecure = new NanoWrapper(443, true);
                     this.nanoSecure.makeSecure(factory, null);
