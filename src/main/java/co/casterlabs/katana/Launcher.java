@@ -47,6 +47,21 @@ public class Launcher implements Runnable {
             new FastLogger().debug("Debug mode enabled.");
         }
 
+        Katana katana = new Katana(this);
+
+        katana.addServlet("STATIC", StaticServlet.class);
+        katana.addServlet("PROXY", ProxyServlet.class);
+        katana.addServlet("WEBSOCKETPROXY", WebSocketProxyServlet.class);
+        katana.addServlet("REDIRECT", RedirectServlet.class);
+        katana.addServlet("FILE", FileServlet.class);
+
+        this.loadConfig(katana);
+
+        katana.start();
+    }
+
+    @SneakyThrows
+    public void loadConfig(Katana katana) {
         JsonArray json;
 
         if (!this.file.exists()) {
@@ -62,17 +77,7 @@ public class Launcher implements Runnable {
             json = Util.readFileAsJson(this.file, JsonArray.class);
         }
 
-        Katana katana = new Katana();
-
-        katana.addServlet("STATIC", StaticServlet.class);
-        katana.addServlet("PROXY", ProxyServlet.class);
-        katana.addServlet("WEBSOCKETPROXY", WebSocketProxyServlet.class);
-        katana.addServlet("REDIRECT", RedirectServlet.class);
-        katana.addServlet("FILE", FileServlet.class);
-
         katana.init(json);
-
-        katana.start();
     }
 
 }

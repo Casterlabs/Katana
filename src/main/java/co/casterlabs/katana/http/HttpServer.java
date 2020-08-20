@@ -65,23 +65,11 @@ public class HttpServer implements Server {
     public HttpServer(ServerConfiguration config, Katana katana) throws IOException {
         this.logger = new FastLogger(String.format("HttpServer (%s)", config.getName()));
 
-        for (Servlet servlet : config.getServlets()) {
-            for (String host : servlet.getHosts()) {
-                String regex = host.toLowerCase().replace(".", "\\.").replace("*", ".*");
-
-                this.hostnames.put(regex, servlet);
-            }
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (String hostname : this.hostnames.keySet()) {
-            sb.append("|(");
-            sb.append(hostname);
-            sb.append(")");
-        }
+        this.loadConfig(config);
 
         this.nano = new NanoWrapper(config.getPort(), false);
-        this.hostnameRegex = sb.substring(1);
+        this.nano.setAsyncRunner(new NanoRunner());
+
         this.port = config.getPort();
         this.katana = katana;
         this.config = config;
@@ -104,6 +92,7 @@ public class HttpServer implements Server {
 
                     this.nanoSecure = new NanoWrapper(443, true);
                     this.nanoSecure.makeSecure(factory, null);
+                    this.nanoSecure.setAsyncRunner(new NanoRunner());
 
                     this.forceHttps = ssl.force;
                 }
@@ -111,6 +100,28 @@ public class HttpServer implements Server {
                 this.failReasons.add(new Reason("Server cannot start due to an exception.", e));
             }
         }
+    }
+
+    @Override
+    public void loadConfig(ServerConfiguration config) {
+        this.hostnames.clear();
+
+        for (Servlet servlet : config.getServlets()) {
+            for (String host : servlet.getHosts()) {
+                String regex = host.toLowerCase().replace(".", "\\.").replace("*", ".*");
+
+                this.hostnames.put(regex, servlet);
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (String hostname : this.hostnames.keySet()) {
+            sb.append("|(");
+            sb.append(hostname);
+            sb.append(")");
+        }
+
+        this.hostnameRegex = sb.substring(1);
     }
 
     @Override

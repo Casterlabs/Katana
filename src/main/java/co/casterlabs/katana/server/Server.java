@@ -11,6 +11,8 @@ public interface Server {
 
     public List<Reason> getFailReasons();
 
+    public void loadConfig(ServerConfiguration config);
+
     public boolean isRunning();
 
     public int[] getPorts();

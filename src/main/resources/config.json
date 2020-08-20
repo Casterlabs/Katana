@@ -30,7 +30,7 @@
 				"type": "proxy",
 				"hostname": "127.0.0.1",
 				"proxy_url": "https://example.com",
-				"proxy_path": "/",
+				"proxy_path": "",
 				"include_path": false
 			},
 			{
@@ -40,7 +40,7 @@
 					"www.fuf.me"
 				],
 				"proxy_url": "wss://echo.websocket.org",
-				"proxy_path": "/echo/",
+				"proxy_path": "/echo",
 				"include_path": false
 			}
 		]

@@ -1,9 +1,9 @@
 package co.casterlabs.katana;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
@@ -14,17 +14,45 @@ import co.casterlabs.katana.http.HttpServer;
 import co.casterlabs.katana.server.Server;
 import co.casterlabs.katana.server.Servlet;
 import lombok.Getter;
+import xyz.e3ndr.consolidate.CommandRegistry;
+import xyz.e3ndr.consolidate.exception.ArgumentsLengthException;
+import xyz.e3ndr.consolidate.exception.CommandExecutionException;
+import xyz.e3ndr.consolidate.exception.CommandNameException;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 @Getter
 public class Katana {
     public static final String ERROR_HTML = "<!DOCTYPE html><html><head><title>$RESPONSECODE</title></head><body><h1>$RESPONSECODE</h1><p>$DESCRIPTION</p><br/><p><i>Running Casterlabs Katana, $ADDRESS</i></p></body></html>";
-    public static final String VERSION = "1.1.1";
+    public static final String VERSION = "1.2.0";
     public static final Gson GSON = new Gson();
 
     private Map<String, Class<? extends Servlet>> servlets = new HashMap<>();
-    private List<Server> servers = new ArrayList<>();
+    private CommandRegistry<Void> commandRegistry = new CommandRegistry<>();
+    private Map<String, Server> servers = new HashMap<>();
     private FastLogger logger = new FastLogger();
+    private Launcher launcher;
+
+    public Katana(Launcher launcher) {
+        this.launcher = launcher;
+        this.commandRegistry.addCommand(new KatanaCommands(this.commandRegistry, this));
+
+        (new Thread() {
+            @SuppressWarnings("resource")
+            @Override
+            public void run() {
+                Scanner in = new Scanner(System.in);
+
+                while (true) {
+                    try {
+                        commandRegistry.execute(in.nextLine());
+                    } catch (CommandNameException | CommandExecutionException | ArgumentsLengthException e) {
+                        e.printStackTrace();
+                        logger.exception(e);
+                    }
+                }
+            }
+        }).start();
+    }
 
     public void init(ServerConfiguration... configurations) {
         for (ServerConfiguration config : configurations) {
@@ -51,7 +79,11 @@ public class Katana {
     }
 
     public void addConfiguration(ServerConfiguration config) throws Exception {
-        this.servers.add(new HttpServer(config, this));
+        if (this.servers.containsKey(config.getName())) {
+            this.servers.get(config.getName()).loadConfig(config);
+        } else {
+            this.servers.put(config.getName(), new HttpServer(config, this));
+        }
     }
 
     public void addServlet(String type, Class<? extends Servlet> servlet) {
@@ -73,7 +105,7 @@ public class Katana {
     }
 
     public void start() {
-        for (Server server : this.servers) {
+        for (Server server : this.servers.values()) {
             if (!server.isRunning()) {
                 server.start();
 
@@ -95,7 +127,7 @@ public class Katana {
     }
 
     public void stop() {
-        for (Server server : this.servers) {
+        for (Server server : this.servers.values()) {
             if (server.isRunning()) {
                 server.stop();
             }
@@ -103,7 +135,7 @@ public class Katana {
     }
 
     public boolean isRunning() {
-        for (Server server : this.servers) {
+        for (Server server : this.servers.values()) {
             if (server.isRunning()) {
                 return true;
             }
