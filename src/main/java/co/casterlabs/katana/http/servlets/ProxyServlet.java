@@ -20,6 +20,8 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 
 public class ProxyServlet extends Servlet {
+    private static final OkHttpClient client = new OkHttpClient();
+
     private HostConfiguration config;
 
     public ProxyServlet() {
@@ -58,7 +60,6 @@ public class ProxyServlet extends Servlet {
                     url += session.getQueryString();
                 }
 
-                OkHttpClient client = new OkHttpClient().newBuilder().build();
                 Request.Builder builder = new Request.Builder().url(url);
 
                 if ((session.getMethod() == Method.POST) || (session.getMethod() == Method.PUT)) {
