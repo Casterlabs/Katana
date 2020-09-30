@@ -83,6 +83,8 @@ public class ProxyServlet extends Servlet {
 
                 session.setStatus(Status.lookup(response.code()));
                 session.setResponse(response.body().bytes());
+
+                response.body().close();
             } else {
                 return false;
             }
