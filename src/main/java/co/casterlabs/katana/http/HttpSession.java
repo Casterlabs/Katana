@@ -104,9 +104,11 @@ public class HttpSession {
     }
 
     public String getRequestBody() throws Exception {
-        this.parseBody(new HashMap<>());
+        Map<String, String> files = new HashMap<>();
 
-        return this.session.getQueryParameterString();
+        this.parseBody(files);
+
+        return files.get("postData");
     }
 
     public class Unsafe {
