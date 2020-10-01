@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import com.google.gson.JsonObject;
+import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.FileUtil;
 import co.casterlabs.katana.Katana;
@@ -12,11 +13,12 @@ import co.casterlabs.katana.Util;
 import co.casterlabs.katana.http.HttpSession;
 import co.casterlabs.katana.server.Servlet;
 import co.casterlabs.katana.server.ServletType;
+import co.casterlabs.miki.json.MikiFileAdapter;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import lombok.SneakyThrows;
 
 public class StaticServlet extends Servlet {
-    private static final List<String> defaultFiles = Arrays.asList("index.html", "index2.html", "default.html", "home.html", "placeholder.html");
+    private static final List<String> defaultFiles = Arrays.asList("index.html", "index.miki", "index2.html", "default.html", "home.html", "placeholder.html");
 
     private HostConfiguration config;
 
@@ -30,8 +32,10 @@ public class StaticServlet extends Servlet {
     }
 
     private static class HostConfiguration {
-        public String directory;
         public boolean require_file_extensions;
+        @SerializedName("use_miki")
+        public boolean useMiki = true;
+        public String directory;
 
     }
 
@@ -46,6 +50,17 @@ public class StaticServlet extends Servlet {
 
             try {
                 if (file.getCanonicalPath().startsWith(directory.getCanonicalPath()) && file.exists() && file.isFile()) {
+                    int index = file.getName().lastIndexOf('.');
+
+                    if (this.config.useMiki && (index != 0)) {
+                        String extension = file.getName().substring(index + 1);
+
+                        if (extension.equalsIgnoreCase("miki")) {
+                            StaticServlet.serveMiki(session, file);
+                            return true;
+                        }
+                    }
+
                     FileUtil.sendFile(file, session);
                 } else {
                     Util.errorResponse(session, Status.NOT_FOUND, "File not found.");
@@ -60,6 +75,18 @@ public class StaticServlet extends Servlet {
         }
 
         return true;
+    }
+
+    public static void serveMiki(HttpSession session, File file) {
+        try {
+            MikiFileAdapter miki = MikiFileAdapter.readFile(file);
+
+            session.setMime(Util.getMimeForFile(new File(miki.getTemplateFile())));
+            session.setResponse(miki.format(session.getMikiGlobals()));
+        } catch (Exception e) {
+            e.printStackTrace();
+            Util.errorResponse(session, Status.INTERNAL_ERROR, String.format("The following Miki template is invalid due to the following reason:<br /><br />%s: %s", e.getClass().getCanonicalName(), e.getMessage()));
+        }
     }
 
 }

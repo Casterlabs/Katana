@@ -1,6 +1,5 @@
 package co.casterlabs.katana.http.servlets;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import com.google.gson.JsonObject;
@@ -10,7 +9,6 @@ import co.casterlabs.katana.Util;
 import co.casterlabs.katana.http.HttpSession;
 import co.casterlabs.katana.server.Servlet;
 import co.casterlabs.katana.server.ServletType;
-import fi.iki.elonen.NanoHTTPD.Method;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import kotlin.Pair;
 import lombok.SneakyThrows;
@@ -62,8 +60,8 @@ public class ProxyServlet extends Servlet {
 
                 Request.Builder builder = new Request.Builder().url(url);
 
-                if ((session.getMethod() == Method.POST) || (session.getMethod() == Method.PUT)) {
-                    builder.post(RequestBody.create(session.getRequestBody().getBytes(StandardCharsets.UTF_8)));
+                if (session.hasBody()) {
+                    builder.method(session.getMethod().name(), RequestBody.create(session.getRequestBodyBytes()));
                 }
 
                 for (Map.Entry<String, String> header : session.getHeaders().entrySet()) {
@@ -84,7 +82,7 @@ public class ProxyServlet extends Servlet {
                 session.setStatus(Status.lookup(response.code()));
                 session.setResponse(response.body().bytes());
 
-                response.body().close();
+                response.close();
             } else {
                 return false;
             }

@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import co.casterlabs.katana.Katana;
+import co.casterlabs.miki.Miki;
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.IHTTPSession;
 import fi.iki.elonen.NanoHTTPD.Method;
@@ -16,6 +18,7 @@ import fi.iki.elonen.NanoHTTPD.ResponseException;
 import fi.iki.elonen.NanoWSD.WebSocket;
 import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -24,18 +27,21 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 @Data
 @RequiredArgsConstructor
+@Setter(AccessLevel.NONE)
 public class HttpSession {
-    private @Setter(AccessLevel.NONE) @NonNull IHTTPSession session;
-    private @Setter(AccessLevel.NONE) @NonNull FastLogger logger;
-    private final @Setter(AccessLevel.NONE) int port;
+    private @NonNull IHTTPSession session;
+    private @NonNull FastLogger logger;
+    private final int port;
 
-    private @Setter(AccessLevel.NONE) Map<String, String> responseHeaders = new HashMap<>();
-    private @Setter(AccessLevel.NONE) boolean websocketRequest = false;
-    private @Setter(AccessLevel.NONE) Unsafe unsafe = new Unsafe();
-    private @Setter(AccessLevel.NONE) String host;
-    private String mime = NanoHTTPD.MIME_HTML;
-    private WebSocket websocketResponse;
-    private Status status = Status.OK;
+    private @Getter(AccessLevel.NONE) byte[] body;
+
+    private Map<String, String> responseHeaders = new HashMap<>();
+    private @Setter String mime = NanoHTTPD.MIME_HTML;
+    private @Setter WebSocket websocketResponse;
+    private @Setter Status status = Status.OK;
+    private boolean websocketRequest = false;
+    private Unsafe unsafe = new Unsafe();
+    private String host;
 
     private @Setter(AccessLevel.NONE) InputStream responseStream = new InputStream() {
         @Override
@@ -77,6 +83,10 @@ public class HttpSession {
         return this.session.getParameters();
     }
 
+    public boolean hasBody() {
+        return this.hasHeader("content-length");
+    }
+
     public String getUri() {
         String uri = this.session.getUri();
 
@@ -104,11 +114,40 @@ public class HttpSession {
     }
 
     public String getRequestBody() throws Exception {
-        Map<String, String> files = new HashMap<>();
+        return new String(this.getRequestBodyBytes());
+    }
 
-        this.parseBody(files);
+    public byte[] getRequestBodyBytes() throws Exception {
+        if (this.body == null) {
+            int contentLength = Integer.parseInt(this.session.getHeaders().get("content-length"));
+            this.body = new byte[contentLength];
 
-        return files.get("postData");
+            this.session.getInputStream().read(this.body, 0, contentLength);
+
+            return this.body;
+        } else {
+            return this.body;
+        }
+    }
+
+    public Map<String, String> getMikiGlobals() {
+        Map<String, String> globals = new HashMap<String, String>() {
+            private static final long serialVersionUID = -902644615560162682L;
+
+            @Override
+            public String get(Object key) {
+                return super.get(((String) key).toLowerCase());
+            }
+        };
+
+        globals.put("server", String.format("Katana/%s (%s)", Katana.VERSION, System.getProperty("os.name", "Generic")));
+        globals.put("miki", String.format("Miki/%s (Katana/%s)", Miki.VERSION, Katana.VERSION));
+        globals.put("status_code", String.valueOf(this.status.getRequestStatus()));
+        globals.put("status_message", this.status.getDescription());
+        globals.put("status", this.status.name());
+        globals.put("host", this.host);
+
+        return globals;
     }
 
     public class Unsafe {

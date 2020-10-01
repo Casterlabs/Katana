@@ -3,6 +3,7 @@ package co.casterlabs.katana.http.servlets;
 import java.io.File;
 
 import com.google.gson.JsonObject;
+import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.FileUtil;
 import co.casterlabs.katana.Katana;
@@ -26,9 +27,10 @@ public class FileServlet extends Servlet {
     }
 
     private static class HostConfiguration {
+        @SerializedName("use_miki")
+        public boolean useMiki = true;
         public String file;
         public String path;
-
     }
 
     @SneakyThrows
@@ -42,6 +44,16 @@ public class FileServlet extends Servlet {
 
                 try {
                     if (file.exists() && file.isFile()) {
+                        int index = file.getName().lastIndexOf('.');
+                        if (this.config.useMiki && (index != 0)) {
+                            String extension = file.getName().substring(index + 1);
+
+                            if (extension.equalsIgnoreCase("miki")) {
+                                StaticServlet.serveMiki(session, file);
+                                return true;
+                            }
+                        }
+
                         FileUtil.sendFile(file, session);
                     } else {
                         Util.errorResponse(session, Status.NOT_FOUND, "File not found.");
@@ -59,6 +71,7 @@ public class FileServlet extends Servlet {
         }
 
         return false;
+
     }
 
 }
