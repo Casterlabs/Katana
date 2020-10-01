@@ -8,11 +8,13 @@ import com.google.gson.JsonObject;
 import co.casterlabs.katana.http.HttpSession;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
 
 @Getter
 public abstract class Servlet {
     private List<String> allowedHosts = new ArrayList<>();
     private List<String> hosts = new ArrayList<>();
+    private @Setter int priority = -1;
     private ServletType type;
     private String id;
 

@@ -1,6 +1,7 @@
 package co.casterlabs.katana.config;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.google.gson.JsonElement;
@@ -36,6 +37,10 @@ public class ServerConfiguration {
 
                 servlet.init(config);
 
+                if (config.has("priority")) {
+                    servlet.setPriority(config.get("priority").getAsInt());
+                }
+
                 if (config.has("hostname")) {
                     String hostname = config.get("hostname").getAsString();
                     servlet.getHosts().add(hostname);
@@ -58,6 +63,18 @@ public class ServerConfiguration {
                 this.servlets.add(servlet);
             }
         }
+
+        Collections.sort(this.servlets, (Servlet s1, Servlet s2) -> {
+            return s1.getPriority() > s2.getPriority() ? -1 : 1;
+        });
+    }
+
+    public void addServlet(Servlet servlet) {
+        this.servlets.add(servlet);
+
+        Collections.sort(this.servlets, (Servlet s1, Servlet s2) -> {
+            return s1.getPriority() > s2.getPriority() ? -1 : 1;
+        });
     }
 
 }
