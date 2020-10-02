@@ -1,7 +1,6 @@
 package co.casterlabs.katana.websocket;
 
 import java.io.IOException;
-import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.util.Map;
 
@@ -13,16 +12,14 @@ import lombok.SneakyThrows;
 
 public class ClientWebSocketConnection extends WebSocket {
     private RemoteWebSocketConnection remote;
+    private boolean connected = false;
 
     @SneakyThrows
     public ClientWebSocketConnection(IHTTPSession nanoSession, String uri) {
         super(nanoSession);
 
         this.remote = new RemoteWebSocketConnection(new URI(uri), this);
-    }
 
-    @Override
-    protected void onOpen() {
         for (Map.Entry<String, String> header : this.getHandshakeRequest().getHeaders().entrySet()) {
             String key = header.getKey();
             // Prevent Nano headers from being injected
@@ -31,31 +28,38 @@ public class ClientWebSocketConnection extends WebSocket {
             }
         }
 
-        this.remote.open();
+        try {
+            this.connected = this.remote.connectBlocking();
+        } catch (Exception ignored) {}
+    }
+
+    @Override
+    protected void onOpen() {
+        if (!this.connected) {
+            try {
+                this.close(CloseCode.AbnormalClosure, "Remote connection encountered an error", true);
+            } catch (IOException ignored) {}
+        }
     }
 
     @Override
     protected void onPong(WebSocketFrame frame) {
-        this.remote.sendMessage(frame.getTextPayload());
+        this.remote.sendPing();
     }
 
     @Override
     protected void onMessage(WebSocketFrame frame) {
-        this.remote.sendMessage(frame.getTextPayload());
+        this.remote.send(frame.getTextPayload());
     }
 
     @Override
     protected void onClose(CloseCode code, String reason, boolean remote) {
-        if (this.remote.isOpen()) {
+        try {
             this.remote.close(code.getValue(), reason);
-        }
+        } catch (Exception ignored) {}
     }
 
     @Override
-    protected void onException(IOException e) {
-        if (!(e instanceof SocketTimeoutException)) { // Ignore
-            e.printStackTrace();
-        }
-    }
+    protected void onException(IOException ignored) {}
 
 }
