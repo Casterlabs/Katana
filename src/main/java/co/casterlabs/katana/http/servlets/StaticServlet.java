@@ -14,6 +14,7 @@ import co.casterlabs.katana.http.HttpSession;
 import co.casterlabs.katana.server.Servlet;
 import co.casterlabs.katana.server.ServletType;
 import co.casterlabs.miki.json.MikiFileAdapter;
+import co.casterlabs.miki.templating.WebResponse;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import lombok.SneakyThrows;
 
@@ -80,9 +81,19 @@ public class StaticServlet extends Servlet {
     public static void serveMiki(HttpSession session, File file) {
         try {
             MikiFileAdapter miki = MikiFileAdapter.readFile(file);
+            WebResponse response = miki.formatAsWeb(session.getMikiGlobals());
 
-            session.setMime(Util.getMimeForFile(new File(miki.getTemplateFile())));
-            session.setResponse(miki.format(session.getMikiGlobals()));
+            if (response.getMime() == null) {
+                if (miki.getTemplateFile() != null) {
+                    session.setMime(Util.getMimeForFile(new File(miki.getTemplateFile())));
+                }
+            } else {
+                session.setMime(response.getMime());
+            }
+
+            session.getResponseHeaders().putAll(response.getHeaders());
+            session.setStatus(Status.lookup(response.getStatus()));
+            session.setResponse(response.getResult());
         } catch (Exception e) {
             e.printStackTrace();
             Util.errorResponse(session, Status.INTERNAL_ERROR, String.format("The following Miki template is invalid due to the following reason:<br /><br />%s: %s", e.getClass().getCanonicalName(), e.getMessage()));
