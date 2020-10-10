@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>co.casterlabs</groupId>
     <artifactId>Katana</artifactId>
-    <version>1.6.0</version>
+    <version>1.6.1</version>
 
     <repositories>
         <repository>
@@ -83,7 +83,7 @@
         <dependency>
             <groupId>com.github.e3ndr</groupId>
             <artifactId>FastLoggingFramework</artifactId>
-            <version>1.5.0</version>
+            <version>1.5.1</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>
