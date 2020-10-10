@@ -101,6 +101,11 @@ public class HttpSession {
         return this.session.getRemoteIpAddress();
     }
 
+    @SuppressWarnings("deprecation")
+    public Map<String, String> getQueryParameters() {
+        return this.session.getParms();
+    }
+
     public boolean hasHeader(String header) {
         return this.session.getHeaders().containsKey(header.toLowerCase());
     }
@@ -119,12 +124,16 @@ public class HttpSession {
 
     public byte[] getRequestBodyBytes() throws Exception {
         if (this.body == null) {
-            int contentLength = Integer.parseInt(this.session.getHeaders().get("content-length"));
-            this.body = new byte[contentLength];
+            if (this.hasBody()) {
+                int contentLength = Integer.parseInt(this.session.getHeaders().get("content-length"));
+                this.body = new byte[contentLength];
 
-            this.session.getInputStream().read(this.body, 0, contentLength);
+                this.session.getInputStream().read(this.body, 0, contentLength);
 
-            return this.body;
+                return this.body;
+            } else {
+                return this.body = new byte[0];
+            }
         } else {
             return this.body;
         }

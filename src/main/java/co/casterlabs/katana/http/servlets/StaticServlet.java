@@ -14,6 +14,7 @@ import co.casterlabs.katana.http.HttpSession;
 import co.casterlabs.katana.server.Servlet;
 import co.casterlabs.katana.server.ServletType;
 import co.casterlabs.miki.json.MikiFileAdapter;
+import co.casterlabs.miki.templating.WebRequest;
 import co.casterlabs.miki.templating.WebResponse;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import lombok.SneakyThrows;
@@ -81,7 +82,9 @@ public class StaticServlet extends Servlet {
     public static void serveMiki(HttpSession session, File file) {
         try {
             MikiFileAdapter miki = MikiFileAdapter.readFile(file);
-            WebResponse response = miki.formatAsWeb(session.getMikiGlobals());
+            WebRequest request = new WebRequest(session.getQueryParameters(), session.getHeaders(), session.getHost(), session.getMethod().name(), session.getUri(), session.getRequestBody(), session.getPort());
+
+            WebResponse response = miki.formatAsWeb(session.getMikiGlobals(), request);
 
             if (response.getMime() == null) {
                 if (miki.getTemplateFile() != null) {
