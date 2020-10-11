@@ -47,7 +47,7 @@
         <dependency>
             <groupId>com.github.casterlabs</groupId>
             <artifactId>Miki</artifactId>
-            <version>8be5750</version>
+            <version>f879e38</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
