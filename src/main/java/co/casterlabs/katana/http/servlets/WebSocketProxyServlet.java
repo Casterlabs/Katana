@@ -1,5 +1,7 @@
 package co.casterlabs.katana.http.servlets;
 
+import java.net.URISyntaxException;
+
 import com.google.gson.JsonObject;
 
 import co.casterlabs.katana.Katana;
@@ -9,7 +11,7 @@ import co.casterlabs.katana.server.Servlet;
 import co.casterlabs.katana.server.ServletType;
 import co.casterlabs.katana.websocket.ClientWebSocketConnection;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
-import lombok.SneakyThrows;
+import xyz.e3ndr.fastloggingframework.logging.LoggingUtil;
 
 public class WebSocketProxyServlet extends Servlet {
     private HostConfiguration config;
@@ -30,7 +32,6 @@ public class WebSocketProxyServlet extends Servlet {
 
     }
 
-    @SneakyThrows
     @Override
     public boolean serve(HttpSession session) {
         if (this.config.proxy_url != null) {
@@ -46,9 +47,19 @@ public class WebSocketProxyServlet extends Servlet {
                     url += session.getQueryString();
                 }
 
-                ClientWebSocketConnection client = new ClientWebSocketConnection(session.getSession(), url);
+                try {
+                    ClientWebSocketConnection client = new ClientWebSocketConnection(session.getSession(), url);
 
-                session.setWebsocketResponse(client);
+                    if (client.connect()) {
+                        session.setWebsocketResponse(client);
+                    } else {
+                        Util.errorResponse(session, Status.INTERNAL_ERROR, "Could not connect to remote url.");
+                    }
+                } catch (InterruptedException | URISyntaxException e) {
+                    e.printStackTrace();
+                    Util.errorResponse(session, Status.INTERNAL_ERROR, "An error occured whilst proxying:\n" + LoggingUtil.getExceptionStack(e));
+                }
+
                 return true;
             }
         }

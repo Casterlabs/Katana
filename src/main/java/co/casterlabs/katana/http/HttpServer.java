@@ -213,8 +213,6 @@ public class HttpServer implements Server {
     private Response readResponse(HttpSession session) {
         Response response = NanoHTTPD.newChunkedResponse(session.getStatus(), null, session.getResponseStream());
 
-        // TODO error pages
-
         for (Map.Entry<String, String> header : session.getResponseHeaders().entrySet()) {
             if (header.getKey().equalsIgnoreCase("Content-Type")) {
                 session.setMime(header.getValue());

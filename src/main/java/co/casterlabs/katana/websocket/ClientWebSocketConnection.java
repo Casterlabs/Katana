@@ -2,20 +2,18 @@ package co.casterlabs.katana.websocket;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 
 import fi.iki.elonen.NanoHTTPD.IHTTPSession;
 import fi.iki.elonen.NanoWSD.WebSocket;
 import fi.iki.elonen.NanoWSD.WebSocketFrame;
 import fi.iki.elonen.NanoWSD.WebSocketFrame.CloseCode;
-import lombok.SneakyThrows;
 
-public class ClientWebSocketConnection extends WebSocket {
+public class ClientWebSocketConnection extends WebSocket implements AutoCloseable {
     private RemoteWebSocketConnection remote;
-    private boolean connected = false;
 
-    @SneakyThrows
-    public ClientWebSocketConnection(IHTTPSession nanoSession, String uri) {
+    public ClientWebSocketConnection(IHTTPSession nanoSession, String uri) throws InterruptedException, URISyntaxException {
         super(nanoSession);
 
         this.remote = new RemoteWebSocketConnection(new URI(uri), this);
@@ -27,15 +25,15 @@ public class ClientWebSocketConnection extends WebSocket {
                 this.remote.addHeader(key, header.getValue());
             }
         }
+    }
 
-        try {
-            this.connected = this.remote.connectBlocking();
-        } catch (Exception ignored) {}
+    public boolean connect() throws InterruptedException {
+        return this.remote.connectBlocking();
     }
 
     @Override
     protected void onOpen() {
-        if (!this.connected) {
+        if (!this.isOpen()) {
             try {
                 this.close(CloseCode.AbnormalClosure, "Remote connection encountered an error", true);
             } catch (IOException ignored) {}
@@ -61,5 +59,10 @@ public class ClientWebSocketConnection extends WebSocket {
 
     @Override
     protected void onException(IOException ignored) {}
+
+    @Override
+    public void close() throws Exception {
+        this.remote.closeBlocking();
+    }
 
 }
