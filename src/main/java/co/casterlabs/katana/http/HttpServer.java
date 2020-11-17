@@ -241,7 +241,7 @@ public class HttpServer implements Server {
             } else if (!secure && (!this.allowInsecure || this.forceHttps)) {
                 if (this.forceHttps && !session.isWebsocketRequest()) {
                     session.setStatus(Status.TEMPORARY_REDIRECT);
-                    session.setResponseHeader("Location", "https://" + host + session.getUri());
+                    session.setResponseHeader("Location", "https://" + host + session.getUri() + session.getQueryString());
                 } else {
                     Util.errorResponse(session, Status.FORBIDDEN, "Insecure connections are not allowed.");
                 }

@@ -111,7 +111,11 @@ public class HttpSession {
     }
 
     public String getQueryString() {
-        return "?" + this.session.getQueryParameterString();
+        if (this.session.getQueryParameterString().isEmpty()) {
+            return "";
+        } else {
+            return "?" + this.session.getQueryParameterString();
+        }
     }
 
     public void setResponseHeader(String key, String value) {
