@@ -3,6 +3,7 @@ package co.casterlabs.katana;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 
 import co.casterlabs.katana.http.HttpSession;
@@ -18,7 +19,7 @@ public class FileUtil {
 
         try {
             String etag = Integer.toHexString((file.getAbsolutePath() + file.lastModified() + "" + file.length()).hashCode());
-            String mime = Util.getMimeForFile(file);
+            String mime = Files.probeContentType(file.toPath());
             String range = session.getHeaders().get("range");
             long startFrom = 0;
             long endAt = -1;

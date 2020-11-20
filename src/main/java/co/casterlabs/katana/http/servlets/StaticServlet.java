@@ -1,6 +1,7 @@
 package co.casterlabs.katana.http.servlets;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
@@ -88,7 +89,7 @@ public class StaticServlet extends Servlet {
 
             if (response.getMime() == null) {
                 if (miki.getTemplateFile() != null) {
-                    session.setMime(Util.getMimeForFile(new File(miki.getTemplateFile())));
+                    session.setMime(Files.probeContentType(new File(miki.getTemplateFile()).toPath()));
                 }
             } else {
                 session.setMime(response.getMime());
