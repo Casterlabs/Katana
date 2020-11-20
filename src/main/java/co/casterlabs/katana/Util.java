@@ -2,12 +2,11 @@ package co.casterlabs.katana;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map.Entry;
 
 import org.apache.commons.collections4.MultiValuedMap;
@@ -16,11 +15,24 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
 import co.casterlabs.katana.http.HttpSession;
+import co.casterlabs.katana.http.TLSVersion;
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 
 public class Util {
+
+    public static String[] convertTLS(TLSVersion[] tls) {
+        List<String> versions = new ArrayList<>();
+
+        for (TLSVersion version : tls) {
+            if (version.existsInRuntime()) {
+                versions.add(version.getRuntimeName());
+            }
+        }
+
+        return versions.toArray(new String[0]);
+    }
 
     public static <T extends Collection<String>> T fillFromJson(JsonArray array, T collection) {
         if (array.isJsonArray()) {
@@ -85,22 +97,6 @@ public class Util {
         } catch (IOException e) {
             return null;
         }
-    }
-
-    public static String getMimeForUriString(String uri) {
-        return NanoHTTPD.getMimeTypeForFile(uri);
-    }
-
-    public static String getMimeForUri(URI uri) {
-        return NanoHTTPD.getMimeTypeForFile(uri.toString());
-    }
-
-    public static String getMimeForPath(Path path) {
-        return getMimeForUri(path.toUri());
-    }
-
-    public static String getMimeForFile(File file) {
-        return getMimeForUri(file.toURI());
     }
 
     public static <T> T readFileAsJson(File file, Class<T> clazz) throws Exception {

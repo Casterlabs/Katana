@@ -85,6 +85,31 @@ public class HttpServer implements Server {
                 if (!certificate.exists()) {
                     this.logger.severe("Unable to find SSL certificate file.");
                 } else {
+                    // https://www.java.com/en/configure_crypto.html
+                    // https://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html#customizing_dh_keys
+                    System.setProperty("jdk.tls.ephemeralDHKeySize", String.valueOf(ssl.dh_size));
+                    String disabledAlgorithmsProperty = System.getProperty("jdk.tls.disabledAlgorithms", "DH keySize");
+                    String[] disabledAlgorithms = disabledAlgorithmsProperty.split(",");
+                    boolean replacedParameter = false;
+
+                    for (int i = 0; i != disabledAlgorithms.length; i++) {
+                        if (disabledAlgorithms[i].startsWith("DH keySize")) {
+                            replacedParameter = true;
+
+                            disabledAlgorithms[i] = "DH keySize < " + ssl.dh_size;
+
+                            break;
+                        }
+                    }
+
+                    if (replacedParameter) {
+                        System.setProperty("jdk.tls.disabledAlgorithms", String.join(", ", disabledAlgorithms));
+                    } else {
+                        System.setProperty("jdk.tls.disabledAlgorithms", disabledAlgorithmsProperty + ", DH keySize < " + ssl.dh_size);
+                    }
+
+                    this.logger.debug("Ephemeral DH Key Size: %s", ssl.dh_size);
+
                     KeyStore keystore = KeyStore.getInstance("jks");
                     keystore.load(new FileInputStream(certificate), ssl.keystore_password.toCharArray());
 
@@ -94,7 +119,7 @@ public class HttpServer implements Server {
                     SSLServerSocketFactory factory = NanoHTTPD.makeSSLSocketFactory(keystore, managerFactory);
 
                     this.nanoSecure = new NanoWrapper(443, true);
-                    this.nanoSecure.makeSecure(factory, null);
+                    this.nanoSecure.makeSecure(new WrappedSSLSocketFactory(factory, ssl), Util.convertTLS(ssl.tls));
                     this.nanoSecure.setAsyncRunner(new NanoRunner());
 
                     this.forceHttps = ssl.force;

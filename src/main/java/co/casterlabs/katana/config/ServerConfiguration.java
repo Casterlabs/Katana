@@ -18,9 +18,8 @@ import lombok.Setter;
 public class ServerConfiguration {
     private SSLConfiguration SSL = new SSLConfiguration();
     private List<Servlet> servlets = new ArrayList<>();
-    private boolean panel;
-    private String name;
-    private int port;
+    private String name = "www";
+    private int port = 80;
 
     public ServerConfiguration(JsonObject json, Katana katana) throws IllegalArgumentException {
         this.SSL = Katana.GSON.fromJson(json.get("ssl"), SSLConfiguration.class);
@@ -63,14 +62,6 @@ public class ServerConfiguration {
                 this.servlets.add(servlet);
             }
         }
-
-        Collections.sort(this.servlets, (Servlet s1, Servlet s2) -> {
-            return s1.getPriority() > s2.getPriority() ? -1 : 1;
-        });
-    }
-
-    public void addServlet(Servlet servlet) {
-        this.servlets.add(servlet);
 
         Collections.sort(this.servlets, (Servlet s1, Servlet s2) -> {
             return s1.getPriority() > s2.getPriority() ? -1 : 1;

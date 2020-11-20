@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Scanner;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
@@ -23,8 +24,8 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 @Getter
 public class Katana {
     public static final String ERROR_HTML = "<!DOCTYPE html><html><head><title>$RESPONSECODE</title></head><body><h1>$RESPONSECODE</h1><p>$DESCRIPTION</p><br/><p><i>Running Casterlabs Katana, $ADDRESS</i></p></body></html>";
-    public static final String VERSION = "1.9.1";
-    public static final Gson GSON = new Gson();
+    public static final String VERSION = "1.10.0";
+    public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private Map<String, Class<? extends Servlet>> servlets = new HashMap<>();
     private CommandRegistry<Void> commandRegistry = new CommandRegistry<>();
