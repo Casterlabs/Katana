@@ -111,7 +111,7 @@ public class HttpSession {
     }
 
     public String getQueryString() {
-        if (this.session.getQueryParameterString().isEmpty()) {
+        if (this.session.getQueryParameterString() == null) {
             return "";
         } else {
             return "?" + this.session.getQueryParameterString();
