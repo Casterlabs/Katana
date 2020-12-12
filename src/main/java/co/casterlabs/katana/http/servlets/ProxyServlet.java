@@ -83,7 +83,7 @@ public class ProxyServlet extends Servlet {
                 }
 
                 session.setStatus(Status.lookup(response.code()));
-                session.setResponseStream(response.body().byteStream());
+                session.setResponse(response.body().bytes());
 
                 if (this.config.forward_ip) {
                     session.setResponseHeader("x-katana-ip", session.getRemoteIpAddress());
