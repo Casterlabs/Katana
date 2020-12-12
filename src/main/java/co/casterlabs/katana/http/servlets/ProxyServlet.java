@@ -39,6 +39,7 @@ public class ProxyServlet extends Servlet {
         public String proxy_url;
         public String proxy_path;
         public boolean include_path;
+        public boolean forward_ip;
 
     }
 
@@ -76,11 +77,17 @@ public class ProxyServlet extends Servlet {
                 Response response = client.newCall(request).execute();
 
                 for (Pair<? extends String, ? extends String> header : response.headers()) {
-                    session.setResponseHeader(header.getFirst(), header.getSecond());
+                    if (!header.getFirst().equals("x-katana-ip")) {
+                        session.setResponseHeader(header.getFirst(), header.getSecond());
+                    }
                 }
 
                 session.setStatus(Status.lookup(response.code()));
-                session.setResponse(response.body().bytes());
+                session.setResponseStream(response.body().byteStream());
+
+                if (this.config.forward_ip) {
+                    session.setResponseHeader("x-katana-ip", session.getRemoteIpAddress());
+                }
 
                 response.close();
             } else {
