@@ -68,26 +68,24 @@ public class ProxyServlet extends Servlet {
                 for (Map.Entry<String, String> header : session.getHeaders().entrySet()) {
                     String key = header.getKey();
                     // Prevent Nano headers from being injected
-                    if (!key.equalsIgnoreCase("remote-addr") && !key.equalsIgnoreCase("http-client-ip") && !key.equalsIgnoreCase("host")) {
+                    if (!key.equalsIgnoreCase("x-katana-ip") && !key.equalsIgnoreCase("remote-addr") && !key.equalsIgnoreCase("http-client-ip") && !key.equalsIgnoreCase("host")) {
                         builder.addHeader(key, header.getValue());
                     }
+                }
+
+                if (this.config.forward_ip) {
+                    builder.addHeader("x-katana-ip", session.getRemoteIpAddress());
                 }
 
                 Request request = builder.build();
                 Response response = client.newCall(request).execute();
 
                 for (Pair<? extends String, ? extends String> header : response.headers()) {
-                    if (!header.getFirst().equals("x-katana-ip")) {
-                        session.setResponseHeader(header.getFirst(), header.getSecond());
-                    }
+                    session.setResponseHeader(header.getFirst(), header.getSecond());
                 }
 
                 session.setStatus(Status.lookup(response.code()));
                 session.setResponse(response.body().bytes());
-
-                if (this.config.forward_ip) {
-                    session.setResponseHeader("x-katana-ip", session.getRemoteIpAddress());
-                }
 
                 response.close();
             } else {
