@@ -99,8 +99,11 @@ public class StaticServlet extends Servlet {
             session.setStatus(Status.lookup(response.getStatus()));
             session.setResponse(response.getResult());
         } catch (Exception e) {
-            e.printStackTrace();
-            Util.errorResponse(session, Status.INTERNAL_ERROR, String.format("The following Miki template is invalid due to the following reason:<br /><br />%s: %s", e.getClass().getCanonicalName(), e.getMessage()));
+            if (e.getCause() != null) {
+                Util.errorResponse(session, Status.INTERNAL_ERROR, e.getMessage() + "<br />" + e.getCause().getMessage());
+            } else {
+                Util.errorResponse(session, Status.INTERNAL_ERROR, e.getMessage());
+            }
         }
     }
 
