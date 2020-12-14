@@ -64,7 +64,7 @@ public class FileUtil {
                     session.setResponseHeader("Content-Range", "bytes " + startFrom + "-" + endAt + "/" + fileLen);
                     session.setResponseHeader("ETag", etag);
                     session.setResponseHeader("Content-Length", "" + dataLen);
-                    session.setResponseStream(fis);
+                    session.setResponseStream(fis, dataLen);
                     session.setMime(mime);
                 }
             } else {
@@ -79,7 +79,7 @@ public class FileUtil {
                     session.setResponseHeader("Content-Length", String.valueOf(fileLen));
                     session.setResponseHeader("ETag", etag);
                     session.setMime(mime);
-                    session.setResponseStream(new FileInputStream(file));
+                    session.setResponseStream(new FileInputStream(file), fileLen);
                 }
             }
         } catch (IOException e) {

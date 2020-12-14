@@ -6,8 +6,6 @@ import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.http.HttpListener;
 import co.casterlabs.katana.http.HttpServer;
-import co.casterlabs.katana.http.HttpSession;
-import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import fi.iki.elonen.NanoWSD;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
@@ -39,64 +37,46 @@ public class NanoWrapper extends NanoWSD implements HttpListener {
     // Serves http sessions or calls super to serve websockets
     @Override
     public Response serve(IHTTPSession nanoSession) {
-        try {
-            if (this.isWebsocketRequested(nanoSession)) {
+        if (this.isWebsocketRequested(nanoSession)) {
+            try {
                 return super.serve(nanoSession);
-            } else {
-                long start = System.currentTimeMillis();
-                String host = nanoSession.getHeaders().get("host");
-                HttpSession session = new HttpSession(nanoSession, logger, this.getListeningPort());
-
-                this.server.serveSession(host, session, this.secure);
-
-                Response response = readResponse(session);
-
-                double time = (System.currentTimeMillis() - start) / 1000d;
-                logger.debug("Served HTTP %s %s %s (%.2fs)", session.getMethod().name(), session.getRemoteIpAddress(), session.getHost() + session.getUri(), time);
-
-                return response;
+            } catch (NullPointerException e) { // Happens when no servlet set the websocket response.
+                return Util.errorResponse(Status.BAD_REQUEST, "Unable to upgrade request.", nanoSession.getHeaders().getOrDefault("host", "UNKNOWN"), this.getListeningPort());
             }
-        } catch (NullPointerException e) {
-            String host = nanoSession.getHeaders().get("host");
+        } else {
+            long start = System.currentTimeMillis();
+            NanoHttpSession session = new NanoHttpSession(nanoSession, logger, this.getListeningPort(), false);
 
-            if (host == null) {
-                host = "unknown";
+            this.server.serveSession(session.getHost(), session, this.secure);
+
+            Response response = session.getNanoResponse();
+
+            for (Map.Entry<String, String> header : session.getResponseHeaders().entrySet()) {
+                if (!header.getKey().equalsIgnoreCase("Server")) {
+                    response.addHeader(header.getKey(), header.getValue()); // Check prevents duplicate headers
+                }
             }
 
-            return Util.errorResponse(Status.BAD_REQUEST, "Unable to upgrade request", host, this.getListeningPort());
+            response.addHeader("Server", String.format("Katana/%s (%s)", Katana.VERSION, System.getProperty("os.name", "Generic")));
+
+            double time = (System.currentTimeMillis() - start) / 1000d;
+            logger.debug("Served HTTP %s %s %s (%.2fs)", session.getMethod().name(), session.getRemoteIpAddress(), session.getHost() + session.getUri(), time);
+
+            return response;
         }
     }
 
     @Override
     protected WebSocket openWebSocket(IHTTPSession nanoSession) {
         long start = System.currentTimeMillis();
-        String host = nanoSession.getHeaders().get("host");
-        HttpSession session = new HttpSession(nanoSession, logger, this.getListeningPort());
+        NanoHttpSession session = new NanoHttpSession(nanoSession, logger, this.getListeningPort(), true);
 
-        session.getUnsafe().setWebsocketRequest(true);
-        this.server.serveSession(host, session, this.secure);
+        this.server.serveSession(session.getHost(), session, this.secure);
 
         double time = (System.currentTimeMillis() - start) / 1000d;
         logger.debug("Served websocket %s %s (%.2fs)", session.getRemoteIpAddress(), session.getHost() + session.getUri(), time);
 
         return session.getWebsocketResponse();
-    }
-
-    private Response readResponse(HttpSession session) {
-        Response response = NanoHTTPD.newChunkedResponse(session.getStatus(), null, session.getResponseStream());
-
-        for (Map.Entry<String, String> header : session.getResponseHeaders().entrySet()) {
-            if (header.getKey().equalsIgnoreCase("Content-Type")) {
-                session.setMime(header.getValue());
-            } else if (!header.getKey().equalsIgnoreCase("Server")) {
-                response.addHeader(header.getKey(), header.getValue()); // Check prevents duplicate headers
-            }
-        }
-
-        response.addHeader("Server", String.format("Katana/%s (%s)", Katana.VERSION, System.getProperty("os.name", "Generic")));
-        response.setMimeType(session.getMime());
-
-        return response;
     }
 
     @Override

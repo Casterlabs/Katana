@@ -40,7 +40,6 @@ public class HttpServer implements Server {
     private boolean allowInsecure = true;
     private ServerConfiguration config;
     private boolean forceHttps = false;
-    private String hostnameRegex;
     private FastLogger logger;
     private Katana katana;
 
@@ -133,15 +132,6 @@ public class HttpServer implements Server {
                 this.hostnames.put(regex, servlet);
             }
         }
-
-        StringBuilder sb = new StringBuilder();
-        for (String hostname : this.hostnames.keySet()) {
-            sb.append("|(");
-            sb.append(hostname);
-            sb.append(")");
-        }
-
-        this.hostnameRegex = sb.substring(1);
     }
 
     @Override
@@ -174,15 +164,11 @@ public class HttpServer implements Server {
     // Interacts with servlets
     public void serveSession(String host, HttpSession session, boolean secure) {
         if (host == null) {
-            session.getUnsafe().setHost("unknown");
             Util.errorResponse(session, Status.BAD_REQUEST, "Request is missing \"host\" header.");
         } else {
             host = host.split(":")[0].toLowerCase();
-            session.getUnsafe().setHost(host);
 
-            if (!host.matches(hostnameRegex)) {
-                Util.errorResponse(session, Status.FORBIDDEN, "Host not allowed.");
-            } else if (!secure && (!this.allowInsecure || this.forceHttps)) {
+            if (!secure && (!this.allowInsecure || this.forceHttps)) {
                 if (this.forceHttps && !session.isWebsocketRequest()) {
                     session.setStatus(Status.TEMPORARY_REDIRECT);
                     session.setResponseHeader("Location", "https://" + host + session.getUri() + session.getQueryString());
@@ -194,8 +180,9 @@ public class HttpServer implements Server {
                 boolean served = this.iterateConfigs(session, servlets);
 
                 // Allow CORS
-                if (served && session.getHeader("Sec-Fetch-Mode").equalsIgnoreCase("cors") && session.hasHeader("Referer")) {
-                    String[] split = session.getHeader("Referer").split("://");
+                String refererHeader = session.getHeader("Referer");
+                if (served && session.getHeader("Sec-Fetch-Mode").equalsIgnoreCase("cors") && (refererHeader != null)) {
+                    String[] split = refererHeader.split("://");
                     String protocol = split[0];
                     String referer = split[1].split("/")[0]; // Strip protocol and uri
 
@@ -207,10 +194,6 @@ public class HttpServer implements Server {
                         }
                     }
                 } else if (!served) {
-                    if (!session.isWebsocketRequest()) {
-                        this.logger.warn("No servlet for host %s.", host);
-                    }
-
                     Util.errorResponse(session, Status.INTERNAL_ERROR, "No servlet available.");
                 }
             }
