@@ -8,8 +8,6 @@ import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -24,19 +22,18 @@ import co.casterlabs.katana.Reason;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.config.SSLConfiguration;
 import co.casterlabs.katana.config.ServerConfiguration;
+import co.casterlabs.katana.http.nano.NanoWrapper;
+import co.casterlabs.katana.http.nano.WrappedSSLSocketFactory;
 import co.casterlabs.katana.server.Server;
 import co.casterlabs.katana.server.Servlet;
 import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.Response;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
-import fi.iki.elonen.NanoWSD;
 import lombok.Getter;
+import lombok.SneakyThrows;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 @Getter
 public class HttpServer implements Server {
-    private static final int SOCKET_TIMEOUT = (int) TimeUnit.MINUTES.toMillis(15);
-
     private MultiValuedMap<String, Servlet> hostnames = new ArrayListValuedHashMap<>();
     private List<Reason> failReasons = new ArrayList<>();
     private boolean keepErrorStatus = true;
@@ -46,10 +43,9 @@ public class HttpServer implements Server {
     private String hostnameRegex;
     private FastLogger logger;
     private Katana katana;
-    private int port;
 
-    private NanoWSD nanoSecure;
-    private NanoWSD nano;
+    private HttpListener listenerSecure;
+    private HttpListener listener;
 
     static {
         try {
@@ -70,10 +66,8 @@ public class HttpServer implements Server {
 
         this.loadConfig(config);
 
-        this.nano = new NanoWrapper(config.getPort(), false);
-        this.nano.setAsyncRunner(new NanoRunner());
+        this.listener = new NanoWrapper(this, config.getPort());
 
-        this.port = config.getPort();
         this.katana = katana;
         this.config = config;
 
@@ -118,9 +112,7 @@ public class HttpServer implements Server {
 
                     SSLServerSocketFactory factory = NanoHTTPD.makeSSLSocketFactory(keystore, managerFactory);
 
-                    this.nanoSecure = new NanoWrapper(443, true);
-                    this.nanoSecure.makeSecure(new WrappedSSLSocketFactory(factory, ssl), Util.convertTLS(ssl.tls));
-                    this.nanoSecure.setAsyncRunner(new NanoRunner());
+                    this.listenerSecure = new NanoWrapper(this, 443, new WrappedSSLSocketFactory(factory, ssl), Util.convertTLS(ssl.tls));
 
                     this.forceHttps = ssl.force;
                 }
@@ -157,103 +149,30 @@ public class HttpServer implements Server {
         if (this.failReasons.size() != 0) return;
 
         try {
-            if ((this.nanoSecure != null) && !this.nanoSecure.isAlive()) {
+            if ((this.listenerSecure != null) && !this.listenerSecure.isAlive()) {
                 if (this.forceHttps) this.logger.info("Forcing secure connections.");
 
-                this.nanoSecure.start(SOCKET_TIMEOUT, false);
-                this.logger.info("Started secure server on port 443.");
+                this.listenerSecure.start();
+                this.logger.info("Started secure server on port %d.", this.listenerSecure.getPort());
             }
-            if ((this.nano != null) && !this.nano.isAlive()) {
-                this.nano.start(SOCKET_TIMEOUT, false);
-                this.logger.info("Started server on port %d.", this.port);
+            if ((this.listener != null) && !this.listener.isAlive()) {
+                this.listener.start();
+                this.logger.info("Started server on port %d.", this.listener.getPort());
             }
         } catch (IOException e) {
             this.failReasons.add(new Reason(String.format("Unable to bind on port."), e));
         }
     }
 
+    @SneakyThrows
     @Override
     public void stop() {
-        if (this.nanoSecure != null) this.nanoSecure.stop();
-        if (this.nano != null) this.nano.stop();
-    }
-
-    private class NanoWrapper extends NanoWSD {
-        private boolean secure;
-
-        public NanoWrapper(int port, boolean secure) {
-            super(port);
-
-            this.secure = secure;
-        }
-
-        // Serves http sessions or calls super to serve websockets
-        @Override
-        public Response serve(IHTTPSession nanoSession) {
-            try {
-                if (this.isWebsocketRequested(nanoSession)) {
-                    return super.serve(nanoSession);
-                } else {
-                    long start = System.currentTimeMillis();
-                    String host = nanoSession.getHeaders().get("host");
-                    HttpSession session = new HttpSession(nanoSession, logger, this.getListeningPort());
-
-                    serveSession(host, session, this.secure);
-
-                    Response response = readResponse(session);
-
-                    double time = (System.currentTimeMillis() - start) / 1000d;
-                    logger.debug("Served HTTP %s %s %s (%.2fs)", session.getMethod().name(), session.getRemoteIpAddress(), session.getHost() + session.getUri(), time);
-
-                    return response;
-                }
-            } catch (NullPointerException e) {
-                String host = nanoSession.getHeaders().get("host");
-
-                if (host == null) {
-                    host = "unknown";
-                }
-
-                return Util.errorResponse(Status.BAD_REQUEST, "Unable to upgrade request", host, port);
-            }
-        }
-
-        @Override
-        protected WebSocket openWebSocket(IHTTPSession nanoSession) {
-            long start = System.currentTimeMillis();
-            String host = nanoSession.getHeaders().get("host");
-            HttpSession session = new HttpSession(nanoSession, logger, this.getListeningPort());
-
-            session.getUnsafe().setWebsocketRequest(true);
-            serveSession(host, session, this.secure);
-
-            double time = (System.currentTimeMillis() - start) / 1000d;
-            logger.debug("Served websocket %s %s (%.2fs)", session.getRemoteIpAddress(), session.getHost() + session.getUri(), time);
-
-            return session.getWebsocketResponse();
-        }
-
-    }
-
-    private Response readResponse(HttpSession session) {
-        Response response = NanoHTTPD.newChunkedResponse(session.getStatus(), null, session.getResponseStream());
-
-        for (Map.Entry<String, String> header : session.getResponseHeaders().entrySet()) {
-            if (header.getKey().equalsIgnoreCase("Content-Type")) {
-                session.setMime(header.getValue());
-            } else if (!header.getKey().equalsIgnoreCase("Server")) {
-                response.addHeader(header.getKey(), header.getValue()); // Check prevents duplicate headers
-            }
-        }
-
-        response.addHeader("Server", String.format("Katana/%s (%s)", Katana.VERSION, System.getProperty("os.name", "Generic")));
-        response.setMimeType(session.getMime());
-
-        return response;
+        if (this.listenerSecure != null) this.listenerSecure.stop();
+        if (this.listener != null) this.listener.stop();
     }
 
     // Interacts with servlets
-    private void serveSession(String host, HttpSession session, boolean secure) {
+    public void serveSession(String host, HttpSession session, boolean secure) {
         if (host == null) {
             session.getUnsafe().setHost("unknown");
             Util.errorResponse(session, Status.BAD_REQUEST, "Request is missing \"host\" header.");
@@ -310,22 +229,22 @@ public class HttpServer implements Server {
 
     @Override
     public boolean isRunning() {
-        boolean nanoAlive = (this.nano != null) ? this.nano.isAlive() : false;
-        boolean nanoSecureAlive = (this.nanoSecure != null) ? this.nanoSecure.isAlive() : false;
+        boolean nanoAlive = (this.listener != null) ? this.listener.isAlive() : false;
+        boolean nanoSecureAlive = (this.listenerSecure != null) ? this.listenerSecure.isAlive() : false;
 
         return nanoAlive || nanoSecureAlive;
     }
 
     @Override
-    public int[] getPorts() { // TODO make "dynamic"
-        if (this.nanoSecure != null) {
+    public int[] getPorts() {
+        if (this.listenerSecure != null) {
             return new int[] {
-                    this.port,
-                    this.nanoSecure.getListeningPort()
+                    this.listener.getPort(),
+                    this.listenerSecure.getPort()
             };
         } else {
             return new int[] {
-                    this.port
+                    this.listener.getPort()
             };
         }
     }
