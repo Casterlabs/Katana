@@ -14,7 +14,7 @@ import lombok.Setter;
 public abstract class Servlet {
     private List<String> allowedHosts = new ArrayList<>();
     private List<String> hosts = new ArrayList<>();
-    private @Setter int priority = -1;
+    private @Setter int priority = 1;
     private ServletType type;
     private String id;
 

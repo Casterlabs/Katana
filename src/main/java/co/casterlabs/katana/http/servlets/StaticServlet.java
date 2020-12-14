@@ -95,8 +95,8 @@ public class StaticServlet extends Servlet {
                 session.setMime(response.getMime());
             }
 
-            session.getResponseHeaders().putAll(response.getHeaders());
-            session.setStatus(Status.lookup(response.getStatus()));
+            session.putAllHeaders(response.getHeaders());
+            session.setStatus(response.getStatus());
             session.setResponse(response.getResult());
         } catch (Exception e) {
             if (e.getCause() != null) {

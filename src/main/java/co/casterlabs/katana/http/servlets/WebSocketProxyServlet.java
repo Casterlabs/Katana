@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.http.HttpSession;
+import co.casterlabs.katana.http.nano.NanoHttpSession;
 import co.casterlabs.katana.server.Servlet;
 import co.casterlabs.katana.server.ServletType;
 import co.casterlabs.katana.websocket.ClientWebSocketConnection;
@@ -47,16 +48,17 @@ public class WebSocketProxyServlet extends Servlet {
                     url += session.getQueryString();
                 }
 
+                NanoHttpSession nano = (NanoHttpSession) session;
+
                 try {
-                    ClientWebSocketConnection client = new ClientWebSocketConnection(session.getSession(), url);
+                    ClientWebSocketConnection client = new ClientWebSocketConnection(nano.getNanoSession(), url);
 
                     if (client.connect()) {
-                        session.setWebsocketResponse(client);
+                        nano.setWebsocketResponse(client);
                     } else {
                         Util.errorResponse(session, Status.INTERNAL_ERROR, "Could not connect to remote url.");
                     }
                 } catch (InterruptedException | URISyntaxException e) {
-                    e.printStackTrace();
                     Util.errorResponse(session, Status.INTERNAL_ERROR, "An error occured whilst proxying:\n" + LoggingUtil.getExceptionStack(e));
                 }
 

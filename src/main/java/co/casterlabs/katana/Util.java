@@ -80,7 +80,7 @@ public class Util {
     }
 
     public static void errorResponse(HttpSession session, Status status, String description) {
-        session.setStatus(status);
+        session.setStatus(status.getRequestStatus());
         session.setMime("text/html");
         // @formatter:off
         session.setResponse(Katana.ERROR_HTML

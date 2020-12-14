@@ -4,173 +4,105 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import co.casterlabs.katana.Katana;
-import co.casterlabs.miki.Miki;
-import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.IHTTPSession;
-import fi.iki.elonen.NanoHTTPD.Method;
+import org.jetbrains.annotations.Nullable;
+
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import fi.iki.elonen.NanoHTTPD.ResponseException;
-import fi.iki.elonen.NanoWSD.WebSocket;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.Getter;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
-import lombok.SneakyThrows;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
-@Data
-@RequiredArgsConstructor
-@Setter(AccessLevel.NONE)
-public class HttpSession {
-    private @NonNull IHTTPSession session;
-    private @NonNull FastLogger logger;
-    private final int port;
+public abstract class HttpSession {
 
-    private @Getter(AccessLevel.NONE) byte[] body;
-
-    private Map<String, String> responseHeaders = new HashMap<>();
-    private @Setter String mime = NanoHTTPD.MIME_HTML;
-    private @Setter WebSocket websocketResponse;
-    private @Setter Status status = Status.OK;
-    private boolean websocketRequest = false;
-    private Unsafe unsafe = new Unsafe();
-    private String host;
-
-    private @Setter(AccessLevel.NONE) InputStream responseStream = new InputStream() {
-        @Override
-        public int read() {
-            return -1;
-        }
-    };
-
-    public void setResponse(String str) {
+    // Response
+    public final void setResponse(@NonNull String str) {
         this.setResponse(str.getBytes(StandardCharsets.UTF_8));
     }
 
-    @SneakyThrows
-    public void setResponse(byte[] bytes) {
-        this.responseStream = new ByteArrayInputStream(bytes);
+    public void setResponse(@NonNull byte[] bytes) {
+        this.setResponseStream(new ByteArrayInputStream(bytes), bytes.length);
     }
 
-    public void setResponseStream(InputStream is) {
-        this.responseStream = is;
+    public abstract void setResponseStream(@NonNull InputStream is, long length);
+
+    public abstract void setChunkedResponseStream(@NonNull InputStream is);
+
+    public final void setStatus(Status status) {
+        this.setStatus(status.getRequestStatus());
     }
 
-    public Map<String, String> getHeaders() {
-        return this.session.getHeaders();
-    }
+    public abstract void setStatus(int code);
 
-    public void parseBody(Map<String, String> files) throws IOException, ResponseException {
-        this.session.parseBody(files);
-    }
+    public abstract void setMime(@NonNull String mime);
 
-    public Method getMethod() {
-        return this.session.getMethod();
-    }
+    public abstract void putAllHeaders(@NonNull Map<String, String> headers);
 
-    public String getHeader(String header) {
-        return this.session.getHeaders().getOrDefault(header.toLowerCase(), "");
-    }
+    public abstract void setResponseHeader(@NonNull String key, @NonNull String value);
 
-    public Map<String, List<String>> getParameters() {
-        return this.session.getParameters();
-    }
+    // Request headers
+    public abstract @NonNull Map<String, String> getHeaders();
 
-    public boolean hasBody() {
-        return this.hasHeader("content-length");
-    }
+    public abstract @Nullable String getHeader(@NonNull String header);
 
-    public String getUri() {
-        String uri = this.session.getUri();
+    // URI
+    public abstract String getUri();
 
-        if (uri.endsWith("/")) {
-            uri = uri.substring(0, uri.length() - 1);
-        }
+    public abstract @NonNull Map<String, List<String>> getAllQueryParameters();
 
-        return uri;
-    }
+    public abstract @NonNull Map<String, String> getQueryParameters();
 
-    public String getRemoteIpAddress() {
-        return this.session.getRemoteIpAddress();
-    }
+    public abstract @NonNull String getQueryString();
 
-    @SuppressWarnings("deprecation")
-    public Map<String, String> getQueryParameters() {
-        return this.session.getParms();
-    }
+    // Request body
+    public abstract boolean hasBody();
 
-    public boolean hasHeader(String header) {
-        return this.session.getHeaders().containsKey(header.toLowerCase());
-    }
-
-    public String getQueryString() {
-        if (this.session.getQueryParameterString() == null) {
-            return "";
+    public @Nullable String getRequestBody() throws IOException {
+        if (this.hasBody()) {
+            return new String(this.getRequestBodyBytes(), StandardCharsets.UTF_8);
         } else {
-            return "?" + this.session.getQueryParameterString();
+            return null;
         }
     }
 
-    public void setResponseHeader(String key, String value) {
-        this.responseHeaders.put(key, value);
-    }
+    public abstract @Nullable byte[] getRequestBodyBytes() throws IOException;
 
-    public String getRequestBody() throws Exception {
-        return new String(this.getRequestBodyBytes());
-    }
+    public abstract @NonNull Map<String, String> parseFormBody() throws IOException, ResponseException;
 
-    public byte[] getRequestBodyBytes() throws Exception {
-        if (this.body == null) {
-            if (this.hasBody()) {
-                int contentLength = Integer.parseInt(this.session.getHeaders().get("content-length"));
-                this.body = new byte[contentLength];
+    // Server info
+    public abstract @NonNull String getHost();
 
-                this.session.getInputStream().read(this.body, 0, contentLength);
+    public abstract int getPort();
 
-                return this.body;
-            } else {
-                return this.body = new byte[0];
-            }
-        } else {
-            return this.body;
-        }
-    }
+    public abstract @NonNull FastLogger getLogger();
 
-    public Map<String, String> getMikiGlobals() {
-        Map<String, String> globals = new HashMap<String, String>() {
-            private static final long serialVersionUID = -902644615560162682L;
+    // Misc
+    public abstract @NonNull Method getMethod();
 
-            @Override
-            public String get(Object key) {
-                return super.get(((String) key).toLowerCase());
-            }
-        };
+    public abstract @NonNull String getRemoteIpAddress();
 
-        globals.put("server", String.format("Katana/%s (%s)", Katana.VERSION, System.getProperty("os.name", "Generic")));
-        globals.put("miki", String.format("Miki/%s (Katana/%s)", Miki.VERSION, Katana.VERSION));
-        globals.put("status_code", String.valueOf(this.status.getRequestStatus()));
-        globals.put("status_message", this.status.getDescription());
-        globals.put("status", this.status.name());
-        globals.put("host", this.host);
+    public abstract @NonNull Map<String, String> getMikiGlobals();
 
-        return globals;
-    }
+    public abstract boolean isWebsocketRequest();
 
-    public class Unsafe {
-        public void setWebsocketRequest(boolean socketRequest) {
-            websocketRequest = socketRequest;
-        }
-
-        public void setHost(String newHost) {
-            host = newHost;
-        }
+    public enum Method {
+        GET,
+        PUT,
+        POST,
+        DELETE,
+        HEAD,
+        OPTIONS,
+        TRACE,
+        CONNECT,
+        PATCH,
+        PROPFIND,
+        PROPPATCH,
+        MKCOL,
+        MOVE,
+        COPY,
+        LOCK,
+        UNLOCK;
     }
 
 }

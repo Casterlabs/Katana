@@ -37,7 +37,7 @@ public class ProxyServlet extends Servlet {
 
     private static class HostConfiguration {
         public String proxy_url;
-        public String proxy_path;
+        public String proxy_path = "*";
         public boolean include_path;
         public boolean forward_ip;
 
@@ -81,10 +81,14 @@ public class ProxyServlet extends Servlet {
                 Response response = client.newCall(request).execute();
 
                 for (Pair<? extends String, ? extends String> header : response.headers()) {
-                    session.setResponseHeader(header.getFirst(), header.getSecond());
+                    String key = header.getFirst();
+
+                    if (!key.equalsIgnoreCase("transfer-encoding")) {
+                        session.setResponseHeader(key, header.getSecond());
+                    }
                 }
 
-                session.setStatus(Status.lookup(response.code()));
+                session.setStatus(response.code());
                 session.setResponse(response.body().bytes());
 
                 response.close();

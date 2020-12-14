@@ -1,4 +1,4 @@
-package co.casterlabs.katana.http;
+package co.casterlabs.katana.http.nano;
 
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
