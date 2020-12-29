@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map.Entry;
 
 import org.apache.commons.collections4.MultiValuedMap;
@@ -23,15 +22,13 @@ import fi.iki.elonen.NanoHTTPD.Response.Status;
 public class Util {
 
     public static String[] convertTLS(TLSVersion[] tls) {
-        List<String> versions = new ArrayList<>();
+        String[] versions = new String[tls.length];
 
-        for (TLSVersion version : tls) {
-            if (version.existsInRuntime()) {
-                versions.add(version.getRuntimeName());
-            }
+        for (int i = 0; i != tls.length; i++) {
+            versions[i] = tls[i].getRuntimeName();
         }
 
-        return versions.toArray(new String[0]);
+        return versions;
     }
 
     public static <T extends Collection<String>> T fillFromJson(JsonArray array, T collection) {

@@ -24,6 +24,10 @@ public class FileUtil {
             long startFrom = 0;
             long endAt = -1;
 
+            if (mime == null) {
+                mime = "application/octet-stream";
+            }
+
             if (range != null) {
                 if (range.startsWith("bytes=")) {
                     range = range.substring("bytes=".length());
