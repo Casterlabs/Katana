@@ -35,9 +35,12 @@ public class StaticServlet extends Servlet {
     }
 
     private static class HostConfiguration {
-        public boolean require_file_extensions;
+        @SerializedName("require_file_extensions")
+        public boolean requireFileExtensions;
+
         @SerializedName("use_miki")
         public boolean useMiki = true;
+
         public String directory;
 
     }
@@ -49,7 +52,7 @@ public class StaticServlet extends Servlet {
             return false;
         } else if (this.config.directory != null) {
             File directory = new File(this.config.directory);
-            File file = FileUtil.getFile(directory, session.getUri().replace('\\', '/'), this.config.require_file_extensions, defaultFiles);
+            File file = FileUtil.getFile(directory, session.getUri().replace('\\', '/'), this.config.requireFileExtensions, defaultFiles);
 
             try {
                 if (file.getCanonicalPath().startsWith(directory.getCanonicalPath()) && file.exists() && file.isFile()) {

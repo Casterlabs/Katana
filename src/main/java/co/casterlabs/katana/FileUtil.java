@@ -108,7 +108,7 @@ public class FileUtil {
 
             if (parent.isDirectory()) {
                 for (File possible : parent.listFiles()) {
-                    if (possible.isFile() && possible.getName().split("\\.")[0].equals(name)) {
+                    if (possible.isFile() && possible.getName().split("\\.")[0].equalsIgnoreCase(name)) {
                         return possible;
                     }
                 }
