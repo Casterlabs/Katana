@@ -3,6 +3,7 @@ package co.casterlabs.katana.http.servlets;
 import java.util.Map;
 
 import com.google.gson.JsonObject;
+import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
@@ -30,16 +31,23 @@ public class ProxyServlet extends Servlet {
     public void init(JsonObject config) {
         this.config = Katana.GSON.fromJson(config, HostConfiguration.class);
 
-        if (this.config.proxy_path != null) {
-            this.config.proxy_path = this.config.proxy_path.replace("*", ".*");
+        if (this.config.proxyPath != null) {
+            this.config.proxyPath = this.config.proxyPath.replace("*", ".*");
         }
     }
 
     private static class HostConfiguration {
-        public String proxy_url;
-        public String proxy_path = "*";
-        public boolean include_path;
-        public boolean forward_ip;
+        @SerializedName("proxy_url")
+        public String proxyUrl;
+
+        @SerializedName("proxy_path")
+        public String proxyPath = "*";
+
+        @SerializedName("include_path")
+        public boolean includePath;
+
+        @SerializedName("forward_ip")
+        public boolean forwardIp;
 
     }
 
@@ -48,14 +56,14 @@ public class ProxyServlet extends Servlet {
     public boolean serve(HttpSession session) {
         if (session.isWebsocketRequest()) {
             return false;
-        } else if (this.config.proxy_url != null) {
-            if ((this.config.proxy_path == null) || session.getUri().matches(this.config.proxy_path)) {
-                String url = this.config.proxy_url;
+        } else if (this.config.proxyUrl != null) {
+            if ((this.config.proxyPath == null) || session.getUri().matches(this.config.proxyPath)) {
+                String url = this.config.proxyUrl;
 
-                if (this.config.proxy_path == null) {
+                if (this.config.proxyPath == null) {
                     url += session.getUri();
-                } else if (this.config.include_path) {
-                    url += session.getUri().replace(this.config.proxy_path.replace(".*", ""), "");
+                } else if (this.config.includePath) {
+                    url += session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
                     url += session.getQueryString();
                 }
 
@@ -73,7 +81,7 @@ public class ProxyServlet extends Servlet {
                     }
                 }
 
-                if (this.config.forward_ip) {
+                if (this.config.forwardIp) {
                     builder.addHeader("x-katana-ip", session.getRemoteIpAddress());
                 }
 

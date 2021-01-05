@@ -24,6 +24,10 @@ public class FileUtil {
             long startFrom = 0;
             long endAt = -1;
 
+            if (mime == null) {
+                mime = "application/octet-stream";
+            }
+
             if (range != null) {
                 if (range.startsWith("bytes=")) {
                     range = range.substring("bytes=".length());
@@ -104,7 +108,7 @@ public class FileUtil {
 
             if (parent.isDirectory()) {
                 for (File possible : parent.listFiles()) {
-                    if (possible.isFile() && possible.getName().split("\\.")[0].equals(name)) {
+                    if (possible.isFile() && possible.getName().split("\\.")[0].equalsIgnoreCase(name)) {
                         return possible;
                     }
                 }

@@ -29,8 +29,11 @@ public class FileServlet extends Servlet {
     private static class HostConfiguration {
         @SerializedName("use_miki")
         public boolean useMiki = true;
+
         public String file;
+
         public String path;
+
     }
 
     @SneakyThrows

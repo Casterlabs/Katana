@@ -181,19 +181,21 @@ public class HttpServer implements Server {
 
                 // Allow CORS
                 String refererHeader = session.getHeader("Referer");
-                if (served && session.getHeader("Sec-Fetch-Mode").equalsIgnoreCase("cors") && (refererHeader != null)) {
-                    String[] split = refererHeader.split("://");
-                    String protocol = split[0];
-                    String referer = split[1].split("/")[0]; // Strip protocol and uri
+                if (served) {
+                    if (!session.isWebsocketRequest() && (refererHeader != null)) {
+                        String[] split = refererHeader.split("://");
+                        String protocol = split[0];
+                        String referer = split[1].split("/")[0]; // Strip protocol and uri
 
-                    for (Servlet servlet : servlets) {
-                        if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
-                            session.setResponseHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
-                            this.logger.debug("Set CORS header for %s", referer);
-                            break;
+                        for (Servlet servlet : servlets) {
+                            if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
+                                session.setResponseHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
+                                this.logger.debug("Set CORS header for %s", referer);
+                                break;
+                            }
                         }
                     }
-                } else if (!served) {
+                } else {
                     Util.errorResponse(session, Status.INTERNAL_ERROR, "No servlet available.");
                 }
             }

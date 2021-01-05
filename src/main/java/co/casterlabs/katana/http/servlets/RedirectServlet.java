@@ -1,6 +1,7 @@
 package co.casterlabs.katana.http.servlets;
 
 import com.google.gson.JsonObject;
+import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
@@ -23,20 +24,23 @@ public class RedirectServlet extends Servlet {
     }
 
     private static class HostConfiguration {
-        public String redirect_url;
-        public boolean include_path;
+        @SerializedName("redirectUrl")
+        public String redirectUrl;
+
+        @SerializedName("includePath")
+        public boolean includePath;
 
     }
 
     @SneakyThrows
     @Override
     public boolean serve(HttpSession session) {
-        if (this.config.redirect_url != null) {
+        if (this.config.redirectUrl != null) {
             if (!session.isWebsocketRequest()) {
-                if (this.config.include_path) {
-                    session.setResponseHeader("location", this.config.redirect_url + session.getUri());
+                if (this.config.includePath) {
+                    session.setResponseHeader("location", this.config.redirectUrl + session.getUri());
                 } else {
-                    session.setResponseHeader("location", this.config.redirect_url);
+                    session.setResponseHeader("location", this.config.redirectUrl);
                 }
                 session.setStatus(Status.TEMPORARY_REDIRECT);
                 return true;

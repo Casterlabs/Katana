@@ -3,6 +3,7 @@ package co.casterlabs.katana.http.servlets;
 import java.net.URISyntaxException;
 
 import com.google.gson.JsonObject;
+import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
@@ -27,24 +28,28 @@ public class WebSocketProxyServlet extends Servlet {
     }
 
     private static class HostConfiguration {
-        public String proxy_url;
-        public String proxy_path;
+        @SerializedName("proxy_url")
+        public String proxyUrl;
+
+        @SerializedName("proxy_path")
+        public String proxyPath;
+
         public boolean include_path;
 
     }
 
     @Override
     public boolean serve(HttpSession session) {
-        if (this.config.proxy_url != null) {
-            if ((this.config.proxy_path != null) && !session.getUri().equalsIgnoreCase(this.config.proxy_path)) {
+        if (this.config.proxyUrl != null) {
+            if ((this.config.proxyPath != null) && !session.getUri().equalsIgnoreCase(this.config.proxyPath)) {
                 return false;
             } else if (!session.isWebsocketRequest()) {
                 Util.errorResponse(session, Status.BAD_REQUEST, "Unable to upgrade.");
             } else {
-                String url = this.config.proxy_url;
+                String url = this.config.proxyUrl;
 
                 if (this.config.include_path) {
-                    url += session.getUri().replace(this.config.proxy_path.replace(".*", ""), "");
+                    url += session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
                     url += session.getQueryString();
                 }
 
