@@ -91,7 +91,7 @@ public class ProxyServlet extends Servlet {
                 for (Pair<? extends String, ? extends String> header : response.headers()) {
                     String key = header.getFirst();
 
-                    if (!key.equalsIgnoreCase("transfer-encoding")) {
+                    if (!key.equalsIgnoreCase("Transfer-Encoding") && !key.equalsIgnoreCase("Content-Length") && !key.equalsIgnoreCase("Content-Type")) {
                         session.setResponseHeader(key, header.getSecond());
                     }
                 }

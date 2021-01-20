@@ -1,12 +1,14 @@
-package co.casterlabs.katana.websocket;
+package co.casterlabs.katana.http.servlets;
 
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.util.concurrent.TimeUnit;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
+import co.casterlabs.katana.http.nano.websocket.ClientWebSocketConnection;
 import fi.iki.elonen.NanoWSD.WebSocketFrame.CloseCode;
 
 public class RemoteWebSocketConnection extends WebSocketClient {
@@ -21,7 +23,17 @@ public class RemoteWebSocketConnection extends WebSocketClient {
     }
 
     @Override
-    public void onOpen(ServerHandshake handshakedata) {}
+    public void onOpen(ServerHandshake handshakedata) {
+        new Thread(() -> {
+            while (this.isOpen()) {
+                try {
+                    this.sendPing();
+
+                    TimeUnit.SECONDS.sleep(2);
+                } catch (Exception e) {}
+            }
+        }).start();
+    }
 
     @Override
     public void onMessage(String message) {

@@ -1,4 +1,4 @@
-package co.casterlabs.katana.websocket;
+package co.casterlabs.katana.http.nano.websocket;
 
 import java.io.IOException;
 import java.net.URI;
@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.java_websocket.enums.Opcode;
 
+import co.casterlabs.katana.http.servlets.RemoteWebSocketConnection;
 import fi.iki.elonen.NanoHTTPD.IHTTPSession;
 import fi.iki.elonen.NanoWSD.WebSocket;
 import fi.iki.elonen.NanoWSD.WebSocketFrame;

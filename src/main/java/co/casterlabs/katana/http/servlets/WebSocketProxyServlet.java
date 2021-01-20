@@ -9,9 +9,9 @@ import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.http.HttpSession;
 import co.casterlabs.katana.http.nano.NanoHttpSession;
+import co.casterlabs.katana.http.nano.websocket.ClientWebSocketConnection;
 import co.casterlabs.katana.server.Servlet;
 import co.casterlabs.katana.server.ServletType;
-import co.casterlabs.katana.websocket.ClientWebSocketConnection;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import xyz.e3ndr.fastloggingframework.logging.LoggingUtil;
 
