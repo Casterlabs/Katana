@@ -1,5 +1,6 @@
 package co.casterlabs.katana.http.servlets;
 
+import java.io.IOException;
 import java.util.Map;
 
 import com.google.gson.JsonObject;
@@ -12,7 +13,6 @@ import co.casterlabs.katana.server.Servlet;
 import co.casterlabs.katana.server.ServletType;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import kotlin.Pair;
-import lombok.SneakyThrows;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -51,7 +51,6 @@ public class ProxyServlet extends Servlet {
 
     }
 
-    @SneakyThrows
     @Override
     public boolean serve(HttpSession session) {
         if (session.isWebsocketRequest()) {
@@ -67,39 +66,44 @@ public class ProxyServlet extends Servlet {
                     url += session.getQueryString();
                 }
 
-                Request.Builder builder = new Request.Builder().url(url);
+                try {
+                    Request.Builder builder = new Request.Builder().url(url);
 
-                if (session.hasBody()) {
-                    builder.method(session.getMethod().name(), RequestBody.create(session.getRequestBodyBytes()));
-                }
-
-                for (Map.Entry<String, String> header : session.getHeaders().entrySet()) {
-                    String key = header.getKey();
-                    // Prevent Nano headers from being injected
-                    if (!key.equalsIgnoreCase("x-katana-ip") && !key.equalsIgnoreCase("remote-addr") && !key.equalsIgnoreCase("http-client-ip") && !key.equalsIgnoreCase("host")) {
-                        builder.addHeader(key, header.getValue());
+                    if (session.hasBody()) {
+                        builder.method(session.getMethod().name(), RequestBody.create(session.getRequestBodyBytes()));
                     }
-                }
 
-                if (this.config.forwardIp) {
-                    builder.addHeader("x-katana-ip", session.getRemoteIpAddress());
-                }
-
-                Request request = builder.build();
-                Response response = client.newCall(request).execute();
-
-                for (Pair<? extends String, ? extends String> header : response.headers()) {
-                    String key = header.getFirst();
-
-                    if (!key.equalsIgnoreCase("Transfer-Encoding") && !key.equalsIgnoreCase("Content-Length") && !key.equalsIgnoreCase("Content-Type")) {
-                        session.setResponseHeader(key, header.getSecond());
+                    for (Map.Entry<String, String> header : session.getHeaders().entrySet()) {
+                        String key = header.getKey();
+                        // Prevent Nano headers from being injected
+                        if (!key.equalsIgnoreCase("x-katana-ip") && !key.equalsIgnoreCase("remote-addr") && !key.equalsIgnoreCase("http-client-ip") && !key.equalsIgnoreCase("host")) {
+                            builder.addHeader(key, header.getValue());
+                        }
                     }
+
+                    if (this.config.forwardIp) {
+                        builder.addHeader("x-katana-ip", session.getRemoteIpAddress());
+                    }
+
+                    Request request = builder.build();
+                    Response response = client.newCall(request).execute();
+
+                    for (Pair<? extends String, ? extends String> header : response.headers()) {
+                        String key = header.getFirst();
+
+                        if (!key.equalsIgnoreCase("Transfer-Encoding") && !key.equalsIgnoreCase("Content-Length") && !key.equalsIgnoreCase("Content-Type")) {
+                            session.setResponseHeader(key, header.getSecond());
+                        }
+                    }
+
+                    session.setMime(response.header("Content-Type"));
+                    session.setStatus(response.code());
+                    session.setResponse(response.body().bytes());
+
+                    response.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(); // Kill the connection.
                 }
-
-                session.setStatus(response.code());
-                session.setResponse(response.body().bytes());
-
-                response.close();
             } else {
                 return false;
             }
