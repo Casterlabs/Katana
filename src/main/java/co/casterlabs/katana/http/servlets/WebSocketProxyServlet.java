@@ -1,25 +1,23 @@
 package co.casterlabs.katana.http.servlets;
 
+import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
-import co.casterlabs.katana.Util;
-import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.katana.http.nano.NanoHttpSession;
-import co.casterlabs.katana.http.nano.websocket.ClientWebSocketConnection;
-import co.casterlabs.katana.server.Servlet;
-import co.casterlabs.katana.server.ServletType;
-import fi.iki.elonen.NanoHTTPD.Response.Status;
-import xyz.e3ndr.fastloggingframework.logging.LoggingUtil;
+import co.casterlabs.katana.http.websocket.Websocket;
+import co.casterlabs.katana.http.websocket.WebsocketCloseCode;
+import co.casterlabs.katana.http.websocket.WebsocketListener;
+import co.casterlabs.katana.http.websocket.WebsocketSession;
 
-public class WebSocketProxyServlet extends Servlet {
+public class WebSocketProxyServlet extends HttpServlet {
     private HostConfiguration config;
 
     public WebSocketProxyServlet() {
-        super(ServletType.WEBSOCKET, "WEBSOCKETPROXY");
+        super("WEBSOCKETPROXY");
     }
 
     @Override
@@ -39,12 +37,10 @@ public class WebSocketProxyServlet extends Servlet {
     }
 
     @Override
-    public boolean serve(HttpSession session) {
+    public WebsocketListener serveWebsocket(WebsocketSession session) {
         if (this.config.proxyUrl != null) {
             if ((this.config.proxyPath != null) && !session.getUri().equalsIgnoreCase(this.config.proxyPath)) {
-                return false;
-            } else if (!session.isWebsocketRequest()) {
-                Util.errorResponse(session, Status.BAD_REQUEST, "Unable to upgrade.");
+                return null;
             } else {
                 String url = this.config.proxyUrl;
 
@@ -53,25 +49,49 @@ public class WebSocketProxyServlet extends Servlet {
                     url += session.getQueryString();
                 }
 
-                NanoHttpSession nano = (NanoHttpSession) session;
-
                 try {
-                    ClientWebSocketConnection client = new ClientWebSocketConnection(nano.getNanoSession(), url);
+                    URI uri = new URI(url);
 
-                    if (client.connect()) {
-                        nano.setWebsocketResponse(client);
-                    } else {
-                        Util.errorResponse(session, Status.INTERNAL_ERROR, "Could not connect to remote url.");
-                    }
-                } catch (InterruptedException | URISyntaxException e) {
-                    Util.errorResponse(session, Status.INTERNAL_ERROR, "An error occured whilst proxying:\n" + LoggingUtil.getExceptionStack(e));
+                    return new WebsocketListener() {
+                        private RemoteWebSocketConnection client;
+
+                        @Override
+                        public void onOpen(Websocket websocket) {
+                            this.client = new RemoteWebSocketConnection(uri, websocket);
+
+                            try {
+                                if (!this.client.connectBlocking()) {
+                                    websocket.close(WebsocketCloseCode.NORMAL);
+                                }
+                            } catch (IOException | InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        @Override
+                        public void onText(Websocket websocket, String message) {
+                            this.client.send(message);
+                        }
+
+                        @Override
+                        public void onBinary(Websocket websocket, byte[] bytes) {
+                            this.client.send(bytes);
+                        }
+
+                        @Override
+                        public void onClose(Websocket websocket) {
+                            this.client.close();
+                        }
+
+                    };
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                    return null;
                 }
-
-                return true;
             }
         }
 
-        return false;
+        return null;
     }
 
 }

@@ -8,23 +8,22 @@ import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
+import co.casterlabs.katana.http.HttpResponse;
 import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.katana.server.Servlet;
-import co.casterlabs.katana.server.ServletType;
-import fi.iki.elonen.NanoHTTPD.Response.Status;
+import co.casterlabs.katana.http.HttpStatus;
 import kotlin.Pair;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class ProxyServlet extends Servlet {
+public class ProxyServlet extends HttpServlet {
     private static final OkHttpClient client = new OkHttpClient();
 
     private HostConfiguration config;
 
     public ProxyServlet() {
-        super(ServletType.HTTP, "PROXY");
+        super("PROXY");
     }
 
     @Override
@@ -52,10 +51,8 @@ public class ProxyServlet extends Servlet {
     }
 
     @Override
-    public boolean serve(HttpSession session) {
-        if (session.isWebsocketRequest()) {
-            return false;
-        } else if (this.config.proxyUrl != null) {
+    public HttpResponse serveHttp(HttpSession session) {
+        if (this.config.proxyUrl != null) {
             if ((this.config.proxyPath == null) || session.getUri().matches(this.config.proxyPath)) {
                 String url = this.config.proxyUrl;
 
@@ -88,30 +85,35 @@ public class ProxyServlet extends Servlet {
                     Request request = builder.build();
                     Response response = client.newCall(request).execute();
 
+                    HttpStatus status = HttpStatus.lookup(response.code());
+                    long responseLen = response.body().contentLength();
+
+                    //@formatter:off
+                    HttpResponse result = (responseLen == -1) ?
+                            HttpResponse.newChunkedResponse(status, response.body().byteStream()) : 
+                            HttpResponse.newFixedLengthResponse(status, response.body().byteStream(), responseLen);
+                    //@formatter:on
+
                     for (Pair<? extends String, ? extends String> header : response.headers()) {
                         String key = header.getFirst();
 
                         if (!key.equalsIgnoreCase("Transfer-Encoding") && !key.equalsIgnoreCase("Content-Length") && !key.equalsIgnoreCase("Content-Type")) {
-                            session.setResponseHeader(key, header.getSecond());
+                            result.putHeader(key, header.getSecond());
                         }
                     }
 
-                    session.setMime(response.header("Content-Type"));
-                    session.setStatus(response.code());
-                    session.setResponse(response.body().bytes());
+                    result.setMimeType(response.header("Content-Type"));
 
-                    response.close();
+                    return result;
                 } catch (IOException e) {
                     throw new RuntimeException(); // Kill the connection.
                 }
             } else {
-                return false;
+                return null;
             }
         } else {
-            Util.errorResponse(session, Status.INTERNAL_ERROR, "Proxy url not set.");
+            return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "Proxy url not set.");
         }
-
-        return true;
     }
 
 }

@@ -5,17 +5,16 @@ import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
+import co.casterlabs.katana.http.HttpResponse;
 import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.katana.server.Servlet;
-import co.casterlabs.katana.server.ServletType;
-import fi.iki.elonen.NanoHTTPD.Response.Status;
+import co.casterlabs.katana.http.HttpStatus;
 import lombok.SneakyThrows;
 
-public class RedirectServlet extends Servlet {
+public class RedirectServlet extends HttpServlet {
     private HostConfiguration config;
 
     public RedirectServlet() {
-        super(ServletType.HTTP, "REDIRECT");
+        super("REDIRECT");
     }
 
     @Override
@@ -34,23 +33,20 @@ public class RedirectServlet extends Servlet {
 
     @SneakyThrows
     @Override
-    public boolean serve(HttpSession session) {
+    public HttpResponse serveHttp(HttpSession session) {
         if (this.config.redirectUrl != null) {
-            if (!session.isWebsocketRequest()) {
-                if (this.config.includePath) {
-                    session.setResponseHeader("location", this.config.redirectUrl + session.getUri());
-                } else {
-                    session.setResponseHeader("location", this.config.redirectUrl);
-                }
-                session.setStatus(Status.TEMPORARY_REDIRECT);
-                return true;
-            }
-        } else {
-            Util.errorResponse(session, Status.INTERNAL_ERROR, "Redirect url not set.");
-            return true;
-        }
+            HttpResponse response = HttpResponse.newFixedLengthResponse(HttpStatus.TEMPORARY_REDIRECT, new byte[0]);
 
-        return false;
+            if (this.config.includePath) {
+                response.putHeader("location", this.config.redirectUrl + session.getUri());
+            } else {
+                response.putHeader("location", this.config.redirectUrl);
+            }
+
+            return response;
+        } else {
+            return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "Redirect url not set.");
+        }
     }
 
 }

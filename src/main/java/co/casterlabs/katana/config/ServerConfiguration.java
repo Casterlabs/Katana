@@ -8,7 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import co.casterlabs.katana.Katana;
-import co.casterlabs.katana.server.Servlet;
+import co.casterlabs.katana.http.servlets.HttpServlet;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
@@ -17,7 +17,7 @@ import lombok.Setter;
 @Setter(AccessLevel.NONE)
 public class ServerConfiguration {
     private SSLConfiguration SSL = new SSLConfiguration();
-    private List<Servlet> servlets = new ArrayList<>();
+    private List<HttpServlet> servlets = new ArrayList<>();
     private String name = "www";
     private int port = 80;
 
@@ -32,7 +32,7 @@ public class ServerConfiguration {
                 JsonObject config = e.getAsJsonObject();
                 String type = config.get("type").getAsString();
 
-                Servlet servlet = katana.getServlet(type);
+                HttpServlet servlet = katana.getServlet(type);
 
                 servlet.init(config);
 
@@ -63,7 +63,7 @@ public class ServerConfiguration {
             }
         }
 
-        Collections.sort(this.servlets, (Servlet s1, Servlet s2) -> {
+        Collections.sort(this.servlets, (HttpServlet s1, HttpServlet s2) -> {
             return s1.getPriority() > s2.getPriority() ? -1 : 1;
         });
     }

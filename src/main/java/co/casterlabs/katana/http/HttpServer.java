@@ -22,19 +22,20 @@ import co.casterlabs.katana.Reason;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.config.SSLConfiguration;
 import co.casterlabs.katana.config.ServerConfiguration;
-import co.casterlabs.katana.http.nano.NanoWrapper;
-import co.casterlabs.katana.http.nano.WrappedSSLSocketFactory;
+import co.casterlabs.katana.http.servlets.HttpServlet;
+import co.casterlabs.katana.http.websocket.WebsocketListener;
+import co.casterlabs.katana.http.websocket.WebsocketSession;
 import co.casterlabs.katana.server.Server;
-import co.casterlabs.katana.server.Servlet;
+import co.casterlabs.katana.server.WrappedSSLSocketFactory;
+import co.casterlabs.katana.server.nano.NanoWrapper;
 import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.Response.Status;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 @Getter
 public class HttpServer implements Server {
-    private MultiValuedMap<String, Servlet> hostnames = new ArrayListValuedHashMap<>();
+    private MultiValuedMap<String, HttpServlet> hostnames = new ArrayListValuedHashMap<>();
     private List<Reason> failReasons = new ArrayList<>();
     private boolean keepErrorStatus = true;
     private boolean allowInsecure = true;
@@ -125,7 +126,7 @@ public class HttpServer implements Server {
     public void loadConfig(ServerConfiguration config) {
         this.hostnames.clear();
 
-        for (Servlet servlet : config.getServlets()) {
+        for (HttpServlet servlet : config.getServlets()) {
             for (String host : servlet.getHosts()) {
                 String regex = host.toLowerCase().replace(".", "\\.").replace("*", ".*");
 
@@ -162,54 +163,86 @@ public class HttpServer implements Server {
     }
 
     // Interacts with servlets
-    public void serveSession(String host, HttpSession session, boolean secure) {
+    public HttpResponse serveSession(String host, HttpSession session, boolean secure) {
         if (host == null) {
-            Util.errorResponse(session, Status.BAD_REQUEST, "Request is missing \"host\" header.");
+            return Util.errorResponse(session, HttpStatus.BAD_REQUEST, "Request is missing \"host\" header.");
         } else {
-            host = host.split(":")[0].toLowerCase();
-
             if (!secure && (!this.allowInsecure || this.forceHttps)) {
-                if (this.forceHttps && !session.isWebsocketRequest()) {
-                    session.setStatus(Status.TEMPORARY_REDIRECT);
-                    session.setResponseHeader("Location", "https://" + host + session.getUri() + session.getQueryString());
+                if (this.forceHttps) {
+                    HttpResponse response = HttpResponse.newFixedLengthResponse(HttpStatus.TEMPORARY_REDIRECT, new byte[0]);
+
+                    response.putHeader("Location", "https://" + host + session.getUri() + session.getQueryString());
+
+                    return response;
                 } else {
-                    Util.errorResponse(session, Status.FORBIDDEN, "Insecure connections are not allowed.");
+                    return Util.errorResponse(session, HttpStatus.FORBIDDEN, "Insecure connections are not allowed.");
                 }
             } else {
-                Collection<Servlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
-                boolean served = this.iterateConfigs(session, servlets);
+                Collection<HttpServlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
+                HttpResponse response = this.iterateConfigs(session, servlets);
 
                 // Allow CORS
                 String refererHeader = session.getHeader("Referer");
-                if (served) {
-                    if (!session.isWebsocketRequest() && (refererHeader != null)) {
+                if (response != null) {
+                    if (refererHeader != null) {
                         String[] split = refererHeader.split("://");
                         String protocol = split[0];
                         String referer = split[1].split("/")[0]; // Strip protocol and uri
 
-                        for (Servlet servlet : servlets) {
+                        for (HttpServlet servlet : servlets) {
                             if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
-                                session.setResponseHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
+                                response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
                                 this.logger.debug("Set CORS header for %s", referer);
                                 break;
                             }
                         }
                     }
+
+                    return response;
                 } else {
-                    Util.errorResponse(session, Status.INTERNAL_ERROR, "No servlet available.");
+                    return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "No servlet available.");
                 }
             }
         }
     }
 
-    private boolean iterateConfigs(HttpSession session, Collection<Servlet> servlets) {
-        for (Servlet servlet : servlets) {
-            if (servlet.serve(session)) {
-                return true;
+    // Also interacts with servlets
+    public WebsocketListener serveWebsocketSession(String host, WebsocketSession session, boolean secure) {
+        if (host == null) {
+            return null;
+        } else {
+            Collection<HttpServlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
+
+            return this.iterateWebsocketConfigs(session, servlets);
+        }
+    }
+
+    private HttpResponse iterateConfigs(HttpSession session, Collection<HttpServlet> servlets) {
+        HttpResponse response = null;
+
+        for (HttpServlet servlet : servlets) {
+            response = servlet.serveHttp(session);
+
+            if (response != null) {
+                break;
             }
         }
 
-        return false;
+        return response;
+    }
+
+    private WebsocketListener iterateWebsocketConfigs(WebsocketSession session, Collection<HttpServlet> servlets) {
+        WebsocketListener response = null;
+
+        for (HttpServlet servlet : servlets) {
+            response = servlet.serveWebsocket(session);
+
+            if (response != null) {
+                break;
+            }
+        }
+
+        return response;
     }
 
     @Override

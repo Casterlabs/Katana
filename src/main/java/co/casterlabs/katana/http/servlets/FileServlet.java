@@ -1,6 +1,7 @@
 package co.casterlabs.katana.http.servlets;
 
 import java.io.File;
+import java.nio.file.Files;
 
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
@@ -8,17 +9,19 @@ import com.google.gson.annotations.SerializedName;
 import co.casterlabs.katana.FileUtil;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
+import co.casterlabs.katana.http.HttpResponse;
 import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.katana.server.Servlet;
-import co.casterlabs.katana.server.ServletType;
-import fi.iki.elonen.NanoHTTPD.Response.Status;
+import co.casterlabs.katana.http.HttpStatus;
+import co.casterlabs.miki.json.MikiFileAdapter;
+import co.casterlabs.miki.templating.WebRequest;
+import co.casterlabs.miki.templating.WebResponse;
 import lombok.SneakyThrows;
 
-public class FileServlet extends Servlet {
+public class FileServlet extends HttpServlet {
     private HostConfiguration config;
 
     public FileServlet() {
-        super(ServletType.HTTP, "FILE");
+        super("FILE");
     }
 
     @Override
@@ -38,10 +41,8 @@ public class FileServlet extends Servlet {
 
     @SneakyThrows
     @Override
-    public boolean serve(HttpSession session) {
-        if (session.isWebsocketRequest()) {
-            return false;
-        } else if (session.getUri().equals(this.config.path)) {
+    public HttpResponse serveHttp(HttpSession session) {
+        if (session.getUri().equals(this.config.path)) {
             if (this.config.file != null) {
                 File file = new File(this.config.file);
 
@@ -52,29 +53,54 @@ public class FileServlet extends Servlet {
                             String extension = file.getName().substring(index + 1);
 
                             if (extension.equalsIgnoreCase("miki")) {
-                                StaticServlet.serveMiki(session, file);
-                                return true;
+                                return serveMiki(session, file);
                             }
                         }
 
-                        FileUtil.sendFile(file, session);
+                        return FileUtil.sendFile(file, session);
                     } else {
-                        Util.errorResponse(session, Status.NOT_FOUND, "File not found.");
+                        return Util.errorResponse(session, HttpStatus.NOT_FOUND, "File not found.");
                     }
                 } catch (Exception e) {
                     session.getLogger().severe("An error occured whilst reading a file.");
                     session.getLogger().exception(e);
-                    Util.errorResponse(session, Status.INTERNAL_ERROR, "Unable to read file.");
+                    return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "Unable to read file.");
                 }
             } else {
-                Util.errorResponse(session, Status.INTERNAL_ERROR, "Serve directory not set.");
+                return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "Serve directory not set.");
+            }
+        } else {
+            return null;
+        }
+    }
+
+    public static HttpResponse serveMiki(HttpSession session, File file) {
+        try {
+            MikiFileAdapter miki = MikiFileAdapter.readFile(file);
+            WebRequest request = new WebRequest(session.getQueryParameters(), session.getHeaders(), session.getHost(), session.getMethod().name(), session.getUri(), session.getRequestBody(), session.getPort());
+
+            WebResponse response = miki.formatAsWeb(session.getMikiGlobals(), request);
+
+            HttpResponse result = HttpResponse.newFixedLengthResponse(HttpStatus.lookup(response.getStatus()), response.getResult());
+
+            if (response.getMime() == null) {
+                if (miki.getTemplateFile() != null) {
+                    result.setMimeType(Files.probeContentType(new File(miki.getTemplateFile()).toPath()));
+                }
+            } else {
+                result.setMimeType(response.getMime());
             }
 
-            return true;
+            result.putAllHeaders(response.getHeaders());
+
+            return result;
+        } catch (Exception e) {
+            if (e.getCause() != null) {
+                return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, e.getMessage() + "<br />" + e.getCause().getMessage());
+            } else {
+                return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, e.getMessage());
+            }
         }
-
-        return false;
-
     }
 
 }

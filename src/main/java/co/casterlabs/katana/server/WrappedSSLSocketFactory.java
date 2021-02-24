@@ -1,4 +1,4 @@
-package co.casterlabs.katana.http.nano;
+package co.casterlabs.katana.server;
 
 import java.io.IOException;
 import java.net.InetAddress;

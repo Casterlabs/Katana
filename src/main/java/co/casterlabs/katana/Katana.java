@@ -12,8 +12,8 @@ import com.google.gson.JsonElement;
 
 import co.casterlabs.katana.config.ServerConfiguration;
 import co.casterlabs.katana.http.HttpServer;
+import co.casterlabs.katana.http.servlets.HttpServlet;
 import co.casterlabs.katana.server.Server;
-import co.casterlabs.katana.server.Servlet;
 import lombok.Getter;
 import xyz.e3ndr.consolidate.CommandRegistry;
 import xyz.e3ndr.consolidate.exception.ArgumentsLengthException;
@@ -27,7 +27,7 @@ public class Katana {
     public static final String VERSION = "1.13.6";
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    private Map<String, Class<? extends Servlet>> servlets = new HashMap<>();
+    private Map<String, Class<? extends HttpServlet>> servlets = new HashMap<>();
     private CommandRegistry<Void> commandRegistry = new CommandRegistry<>();
     private Map<String, Server> servers = new HashMap<>();
     private FastLogger logger = new FastLogger();
@@ -76,12 +76,12 @@ public class Katana {
         }
     }
 
-    public void addServlet(String type, Class<? extends Servlet> servlet) {
+    public void addServlet(String type, Class<? extends HttpServlet> servlet) {
         this.servlets.put(type.toUpperCase(), servlet);
     }
 
-    public Servlet getServlet(String type) {
-        Class<? extends Servlet> servlet = this.servlets.get(type.toUpperCase());
+    public HttpServlet getServlet(String type) {
+        Class<? extends HttpServlet> servlet = this.servlets.get(type.toUpperCase());
 
         if (servlet == null) {
             throw new IllegalArgumentException("Servlet does not exist");

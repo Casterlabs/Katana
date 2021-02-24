@@ -1,7 +1,6 @@
-package co.casterlabs.katana.http.nano;
+package co.casterlabs.katana.server.nano;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,12 +8,10 @@ import java.util.Map;
 import org.jetbrains.annotations.Nullable;
 
 import co.casterlabs.katana.Katana;
+import co.casterlabs.katana.http.HttpMethod;
 import co.casterlabs.katana.http.HttpSession;
 import co.casterlabs.miki.Miki;
-import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.IHTTPSession;
-import fi.iki.elonen.NanoHTTPD.Response;
-import fi.iki.elonen.NanoHTTPD.Response.Status;
 import fi.iki.elonen.NanoHTTPD.ResponseException;
 import fi.iki.elonen.NanoWSD.WebSocket;
 import lombok.Getter;
@@ -26,67 +23,15 @@ public class NanoHttpSession extends HttpSession {
     private @Getter IHTTPSession nanoSession;
     private FastLogger logger;
     private int port;
-    private boolean websocketRequest;
 
     private byte[] body;
 
-    private @Getter Map<String, String> responseHeaders = new HashMap<>();
-    private int status = Status.OK.getRequestStatus();
-    private String mime = "text/plaintext";
-
-    private InputStream response;
-    private long responseLength = -2; // -1 Chunked, < 0 No response.
-
     private @Getter @Setter WebSocket websocketResponse;
 
-    public NanoHttpSession(IHTTPSession nanoSession, FastLogger logger, int port, boolean websocketRequest) {
+    public NanoHttpSession(IHTTPSession nanoSession, FastLogger logger, int port) {
         this.port = port;
         this.logger = logger;
         this.nanoSession = nanoSession;
-        this.websocketRequest = websocketRequest;
-    }
-
-    public Response getNanoResponse() {
-        if (this.responseLength == -1) {
-            return NanoHTTPD.newChunkedResponse(Status.lookup(this.status), this.mime, this.response);
-        } else if (this.responseLength < 0) {
-            return NanoHTTPD.newFixedLengthResponse(Status.lookup(this.status), this.mime, "");
-        } else {
-            return NanoHTTPD.newFixedLengthResponse(Status.lookup(this.status), this.mime, this.response, this.responseLength);
-        }
-    }
-
-    // Response
-    @Override
-    public void setResponseStream(@NonNull InputStream is, long length) {
-        this.response = is;
-        this.responseLength = length;
-    }
-
-    @Override
-    public void setChunkedResponseStream(@NonNull InputStream is) {
-        this.response = is;
-        this.responseLength = -1;
-    }
-
-    @Override
-    public void setStatus(int code) {
-        this.status = code;
-    }
-
-    @Override
-    public void setMime(@NonNull String mime) {
-        this.mime = mime;
-    }
-
-    @Override
-    public void putAllHeaders(@NonNull Map<String, String> headers) {
-        this.responseHeaders.putAll(headers);
-    }
-
-    @Override
-    public void setResponseHeader(@NonNull String key, @NonNull String value) {
-        this.responseHeaders.put(key, value);
     }
 
     // Request headers
@@ -177,8 +122,8 @@ public class NanoHttpSession extends HttpSession {
 
     // Misc
     @Override
-    public @NonNull Method getMethod() {
-        return HttpSession.Method.valueOf(this.nanoSession.getMethod().name());
+    public @NonNull HttpMethod getMethod() {
+        return HttpMethod.valueOf(this.nanoSession.getMethod().name());
     }
 
     @Override
@@ -200,20 +145,11 @@ public class NanoHttpSession extends HttpSession {
         globals.put("server", String.format("Katana/%s (%s)", Katana.VERSION, System.getProperty("os.name", "Generic")));
         globals.put("miki", String.format("Miki/%s (Katana/%s)", Miki.VERSION, Katana.VERSION));
 
-        globals.put("status_code", String.valueOf(this.status));
-        globals.put("status_message", Status.lookup(this.status).getDescription());
-        globals.put("status", Status.lookup(this.status).name());
-
         globals.put("ip_address", this.getRemoteIpAddress());
 
         globals.put("host", this.getHost());
 
         return globals;
-    }
-
-    @Override
-    public boolean isWebsocketRequest() {
-        return this.websocketRequest;
     }
 
 }

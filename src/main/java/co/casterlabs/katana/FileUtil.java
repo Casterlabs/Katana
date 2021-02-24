@@ -1,32 +1,23 @@
 package co.casterlabs.katana;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.List;
 
+import co.casterlabs.katana.http.HttpResponse;
 import co.casterlabs.katana.http.HttpSession;
-import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.Response;
-import fi.iki.elonen.NanoHTTPD.Response.Status;
+import co.casterlabs.katana.http.HttpStatus;
+import co.casterlabs.katana.http.MimeTypes;
 
 public class FileUtil {
 
-    public static void sendFile(File file, HttpSession session) {
-        session.setResponseHeader("Content-Disposition", "filename=\"" + file.getName() + "\"");
-        session.setResponseHeader("Accept-Ranges", "bytes");
-
+    public static HttpResponse sendFile(File file, HttpSession session) {
         try {
             String etag = Integer.toHexString((file.getAbsolutePath() + file.lastModified() + "" + file.length()).hashCode());
-            String mime = Files.probeContentType(file.toPath());
+            String mime = MimeTypes.getMimeForFile(file);
             String range = session.getHeaders().get("range");
             long startFrom = 0;
             long endAt = -1;
-
-            if (mime == null) {
-                mime = "application/octet-stream";
-            }
 
             if (range != null) {
                 if (range.startsWith("bytes=")) {
@@ -43,51 +34,45 @@ public class FileUtil {
 
             long fileLen = file.length();
 
+            HttpResponse response = null;
+
             if ((range != null) && (startFrom >= 0)) {
                 if (startFrom >= fileLen) {
-                    session.setStatus(Response.Status.RANGE_NOT_SATISFIABLE);
-                    session.setResponseHeader("Content-Range", "bytes 0-0/" + fileLen);
-                    session.setResponseHeader("ETag", etag);
-                    session.setMime(NanoHTTPD.MIME_PLAINTEXT);
-                    session.setResponse("");
+                    response = HttpResponse.newFixedLengthResponse(HttpStatus.RANGE_NOT_SATISFIABLE, new byte[0]);
+
+                    response.putHeader("Content-Range", "bytes 0-0/" + fileLen);
+
+                    return response;
                 } else {
                     if (endAt < 0) endAt = fileLen - 1;
                     long newLen = endAt - startFrom + 1;
                     if (newLen < 0) newLen = 0;
                     long dataLen = newLen;
-                    FileInputStream fis = new FileInputStream(file) {
-                        @Override
-                        public int available() throws IOException {
-                            return (int) dataLen;
-                        }
-                    };
 
-                    fis.skip(startFrom);
+                    response = HttpResponse.newFixedLengthFileResponse(HttpStatus.PARTIAL_CONTENT, file, startFrom, dataLen);
 
-                    session.setStatus(Response.Status.PARTIAL_CONTENT);
-                    session.setResponseHeader("Content-Range", "bytes " + startFrom + "-" + endAt + "/" + fileLen);
-                    session.setResponseHeader("ETag", etag);
-                    session.setResponseHeader("Content-Length", "" + dataLen);
-                    session.setResponseStream(fis, dataLen);
-                    session.setMime(mime);
+                    response.putHeader("Content-Range", "bytes " + startFrom + "-" + endAt + "/" + fileLen);
                 }
             } else {
                 if ((range != null) && etag.equals(session.getHeaders().get("if-none-match"))) {
-                    session.setStatus(Response.Status.RANGE_NOT_SATISFIABLE);
-                    session.setResponseHeader("Content-Range", "bytes 0-0/" + fileLen);
-                    session.setResponseHeader("ETag", etag);
-                    session.setMime(NanoHTTPD.MIME_PLAINTEXT);
-                    session.setResponse("");
+                    response = HttpResponse.newFixedLengthResponse(HttpStatus.RANGE_NOT_SATISFIABLE, new byte[0]);
+
+                    response.putHeader("Content-Range", "bytes 0-0/" + fileLen);
                 } else {
-                    session.setStatus(Response.Status.OK);
-                    session.setResponseHeader("Content-Length", String.valueOf(fileLen));
-                    session.setResponseHeader("ETag", etag);
-                    session.setMime(mime);
-                    session.setResponseStream(new FileInputStream(file), fileLen);
+                    response = HttpResponse.newFixedLengthFileResponse(HttpStatus.OK, file);
                 }
             }
+
+            response.setMimeType(mime);
+
+            response.putHeader("ETag", etag);
+            response.putHeader("Content-Length", String.valueOf(fileLen));
+            response.putHeader("Content-Disposition", "filename=\"" + file.getName() + "\"");
+            response.putHeader("Accept-Ranges", "bytes");
+
+            return response;
         } catch (IOException e) {
-            Util.errorResponse(session, Status.INTERNAL_ERROR, "Error while reading file (exists)");
+            return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "Error while reading file (exists)");
         }
     }
 

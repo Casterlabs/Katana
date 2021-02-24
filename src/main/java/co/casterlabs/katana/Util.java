@@ -13,7 +13,9 @@ import org.apache.commons.collections4.MultiValuedMap;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
+import co.casterlabs.katana.http.HttpResponse;
 import co.casterlabs.katana.http.HttpSession;
+import co.casterlabs.katana.http.HttpStatus;
 import co.casterlabs.katana.http.TLSVersion;
 import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response;
@@ -76,12 +78,10 @@ public class Util {
         // @formatter:on
     }
 
-    public static void errorResponse(HttpSession session, Status status, String description) {
-        session.setStatus(status.getRequestStatus());
-        session.setMime("text/html");
+    public static HttpResponse errorResponse(HttpSession session, HttpStatus status, String description) {
         // @formatter:off
-        session.setResponse(Katana.ERROR_HTML
-                .replace("$RESPONSECODE", String.valueOf(status.getRequestStatus()))
+        return HttpResponse.newFixedLengthResponse(status, Katana.ERROR_HTML
+                .replace("$RESPONSECODE", String.valueOf(status.getStatusCode()))
                 .replace("$DESCRIPTION", description)
                 .replace("$ADDRESS", String.format("%s:%d", session.getHost(), session.getPort()))
         );

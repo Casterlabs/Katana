@@ -3,18 +3,17 @@ package co.casterlabs.katana.http.servlets;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.util.concurrent.TimeUnit;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
-import co.casterlabs.katana.http.nano.websocket.ClientWebSocketConnection;
-import fi.iki.elonen.NanoWSD.WebSocketFrame.CloseCode;
+import co.casterlabs.katana.http.websocket.Websocket;
+import co.casterlabs.katana.http.websocket.WebsocketCloseCode;
 
 public class RemoteWebSocketConnection extends WebSocketClient {
-    private ClientWebSocketConnection client;
+    private Websocket client;
 
-    public RemoteWebSocketConnection(URI serverUri, ClientWebSocketConnection client) {
+    public RemoteWebSocketConnection(URI serverUri, Websocket client) {
         super(serverUri);
 
         this.setTcpNoDelay(true);
@@ -23,17 +22,7 @@ public class RemoteWebSocketConnection extends WebSocketClient {
     }
 
     @Override
-    public void onOpen(ServerHandshake handshakedata) {
-        new Thread(() -> {
-            while (this.isOpen()) {
-                try {
-                    this.sendPing();
-
-                    TimeUnit.SECONDS.sleep(2);
-                } catch (Exception e) {}
-            }
-        }).start();
-    }
+    public void onOpen(ServerHandshake handshakedata) {}
 
     @Override
     public void onMessage(String message) {
@@ -52,7 +41,7 @@ public class RemoteWebSocketConnection extends WebSocketClient {
     @Override
     public void onClose(int code, String reason, boolean remote) {
         try {
-            this.client.close(CloseCode.NormalClosure, reason, false);
+            this.client.close(WebsocketCloseCode.NORMAL);
         } catch (Exception ignored) {}
     }
 
