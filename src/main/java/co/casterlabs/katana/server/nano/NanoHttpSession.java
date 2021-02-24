@@ -7,10 +7,8 @@ import java.util.Map;
 
 import org.jetbrains.annotations.Nullable;
 
-import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.http.HttpMethod;
 import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.miki.Miki;
 import fi.iki.elonen.NanoHTTPD.IHTTPSession;
 import fi.iki.elonen.NanoHTTPD.ResponseException;
 import fi.iki.elonen.NanoWSD.WebSocket;
@@ -107,7 +105,7 @@ public class NanoHttpSession extends HttpSession {
     // Server info
     @Override
     public @NonNull String getHost() {
-        return this.nanoSession.getHeaders().getOrDefault("host", "UNKNOWN");
+        return this.getHeader("host");
     }
 
     @Override
@@ -129,27 +127,6 @@ public class NanoHttpSession extends HttpSession {
     @Override
     public @NonNull String getRemoteIpAddress() {
         return this.nanoSession.getRemoteIpAddress();
-    }
-
-    @Override
-    public @NonNull Map<String, String> getMikiGlobals() {
-        Map<String, String> globals = new HashMap<String, String>() {
-            private static final long serialVersionUID = -902644615560162682L;
-
-            @Override
-            public String get(Object key) {
-                return super.get(((String) key).toLowerCase());
-            }
-        };
-
-        globals.put("server", String.format("Katana/%s (%s)", Katana.VERSION, System.getProperty("os.name", "Generic")));
-        globals.put("miki", String.format("Miki/%s (Katana/%s)", Miki.VERSION, Katana.VERSION));
-
-        globals.put("ip_address", this.getRemoteIpAddress());
-
-        globals.put("host", this.getHost());
-
-        return globals;
     }
 
 }

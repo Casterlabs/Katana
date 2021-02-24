@@ -12,6 +12,7 @@ import co.casterlabs.katana.http.servlets.ProxyServlet;
 import co.casterlabs.katana.http.servlets.RedirectServlet;
 import co.casterlabs.katana.http.servlets.StaticServlet;
 import co.casterlabs.katana.http.servlets.WebSocketProxyServlet;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
@@ -34,6 +35,13 @@ public class Launcher implements Runnable {
             "--debug"
     }, description = "Enables debug logging")
     private boolean debug = false;
+
+    @Getter
+    @Option(names = {
+            "-s",
+            "--server-implementation"
+    }, description = "Sets the desired server implementation")
+    private ServerImplementation implementation = ServerImplementation.NANO;
 
     public static void main(String[] args) {
         new CommandLine(new Launcher()).execute(args);
@@ -78,6 +86,12 @@ public class Launcher implements Runnable {
         }
 
         katana.init(json);
+    }
+
+    public static enum ServerImplementation {
+        NANO,
+        UNDERTOW;
+
     }
 
 }

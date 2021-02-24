@@ -5,7 +5,6 @@ import java.util.Map;
 
 import org.jetbrains.annotations.Nullable;
 
-import co.casterlabs.katana.http.HttpMethod;
 import lombok.NonNull;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
@@ -35,8 +34,6 @@ public abstract class WebsocketSession {
     public abstract @NonNull FastLogger getLogger();
 
     // Misc
-    public abstract @NonNull HttpMethod getMethod();
-
     public abstract @NonNull String getRemoteIpAddress();
 
 }

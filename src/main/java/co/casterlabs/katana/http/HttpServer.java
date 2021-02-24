@@ -13,6 +13,7 @@ import java.util.logging.Logger;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
 
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -27,7 +28,8 @@ import co.casterlabs.katana.http.websocket.WebsocketListener;
 import co.casterlabs.katana.http.websocket.WebsocketSession;
 import co.casterlabs.katana.server.Server;
 import co.casterlabs.katana.server.WrappedSSLSocketFactory;
-import co.casterlabs.katana.server.nano.NanoWrapper;
+import co.casterlabs.katana.server.nano.NanoServer;
+import co.casterlabs.katana.server.undertow.UndertowServer;
 import fi.iki.elonen.NanoHTTPD;
 import lombok.Getter;
 import lombok.SneakyThrows;
@@ -66,10 +68,21 @@ public class HttpServer implements Server {
 
         this.loadConfig(config);
 
-        this.listener = new NanoWrapper(this, config.getPort());
-
         this.katana = katana;
         this.config = config;
+
+        switch (this.katana.getLauncher().getImplementation()) {
+            case NANO:
+                this.logger.info("Using Nano as the server implementation.");
+                this.listener = new NanoServer(this, config.getPort());
+                break;
+
+            case UNDERTOW:
+                this.logger.info("Using Undertow as the server implementation.");
+                this.listener = new UndertowServer(this, config.getPort());
+                break;
+
+        }
 
         SSLConfiguration ssl = config.getSSL();
         if ((ssl != null) && ssl.enabled) {
@@ -110,11 +123,24 @@ public class HttpServer implements Server {
                     KeyManagerFactory managerFactory = KeyManagerFactory.getInstance("SunX509");
                     managerFactory.init(keystore, ssl.key_password.toCharArray());
 
-                    SSLServerSocketFactory factory = NanoHTTPD.makeSSLSocketFactory(keystore, managerFactory);
-
-                    this.listenerSecure = new NanoWrapper(this, 443, new WrappedSSLSocketFactory(factory, ssl), Util.convertTLS(ssl.tls));
-
                     this.forceHttps = ssl.force;
+
+                    String[] tls = Util.convertTLS(ssl.tls);
+
+                    switch (this.katana.getLauncher().getImplementation()) {
+                        case NANO:
+                            SSLServerSocketFactory factory = NanoHTTPD.makeSSLSocketFactory(keystore, managerFactory);
+                            this.listenerSecure = new NanoServer(this, 443, new WrappedSSLSocketFactory(factory, ssl), tls);
+                            break;
+
+                        case UNDERTOW:
+                            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                            trustManagerFactory.init(keystore);
+
+                            this.listener = new UndertowServer(this, 443, managerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), tls);
+                            break;
+
+                    }
                 }
             } catch (Exception e) {
                 this.failReasons.add(new Reason("Server cannot start due to an exception.", e));

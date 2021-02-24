@@ -3,7 +3,6 @@ package co.casterlabs.katana.server.nano;
 import java.util.List;
 import java.util.Map;
 
-import co.casterlabs.katana.http.HttpMethod;
 import co.casterlabs.katana.http.websocket.WebsocketSession;
 import fi.iki.elonen.NanoHTTPD.IHTTPSession;
 import lombok.AllArgsConstructor;
@@ -52,7 +51,7 @@ public class NanoWebsocketSessionWrapper extends WebsocketSession {
     // Server info
     @Override
     public @NonNull String getHost() {
-        return this.nanoSession.getHeaders().getOrDefault("host", "UNKNOWN");
+        return this.getHeader("host");
     }
 
     @Override
@@ -66,11 +65,6 @@ public class NanoWebsocketSessionWrapper extends WebsocketSession {
     }
 
     // Misc
-    @Override
-    public @NonNull HttpMethod getMethod() {
-        return HttpMethod.valueOf(this.nanoSession.getMethod().name());
-    }
-
     @Override
     public @NonNull String getRemoteIpAddress() {
         return this.nanoSession.getRemoteIpAddress();

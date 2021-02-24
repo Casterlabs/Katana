@@ -15,12 +15,12 @@ import fi.iki.elonen.NanoHTTPD.Response.IStatus;
 import fi.iki.elonen.NanoWSD;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
-public class NanoWrapper extends NanoWSD implements HttpListener {
+public class NanoServer extends NanoWSD implements HttpListener {
     private FastLogger logger = new FastLogger();
     private HttpServer server;
     private boolean secure;
 
-    public NanoWrapper(HttpServer server, int port) {
+    public NanoServer(HttpServer server, int port) {
         super(port);
 
         this.setAsyncRunner(new NanoRunner());
@@ -29,7 +29,7 @@ public class NanoWrapper extends NanoWSD implements HttpListener {
         this.server = server;
     }
 
-    public NanoWrapper(HttpServer server, int port, WrappedSSLSocketFactory factory, String[] tls) {
+    public NanoServer(HttpServer server, int port, WrappedSSLSocketFactory factory, String[] tls) {
         super(port);
 
         this.makeSecure(factory, tls);
@@ -96,7 +96,7 @@ public class NanoWrapper extends NanoWSD implements HttpListener {
 
             return new NanoWebsocketWrapper(nanoSession, listener);
         } else {
-            logger.debug("Dropped websocket %s %s %s", session.getMethod().name(), session.getRemoteIpAddress(), session.getHost() + session.getUri());
+            logger.debug("Dropped websocket %s %s", session.getRemoteIpAddress(), session.getHost() + session.getUri());
             return null;
         }
     }
