@@ -67,24 +67,13 @@ public class Util {
         return false;
     }
 
-    public static Response errorResponse(Status status, String description, String host, int port) {
-        // @formatter:off
-        return NanoHTTPD.newFixedLengthResponse(status, "text/html", 
-                Katana.ERROR_HTML
-                .replace("$RESPONSECODE", String.valueOf(status.getRequestStatus()))
-                .replace("$DESCRIPTION", description)
-                .replace("$ADDRESS", String.format("%s:%d", host, port))
-        );
-        // @formatter:on
-    }
-
     public static HttpResponse errorResponse(HttpSession session, HttpStatus status, String description) {
         // @formatter:off
         return HttpResponse.newFixedLengthResponse(status, Katana.ERROR_HTML
                 .replace("$RESPONSECODE", String.valueOf(status.getStatusCode()))
                 .replace("$DESCRIPTION", description)
                 .replace("$ADDRESS", String.format("%s:%d", session.getHost(), session.getPort()))
-        );
+        ).setMimeType("text/html");
         // @formatter:on
     }
 
