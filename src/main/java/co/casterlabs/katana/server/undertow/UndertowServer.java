@@ -11,6 +11,7 @@ import javax.net.ssl.TrustManager;
 
 import org.xnio.Options;
 import org.xnio.Sequence;
+import org.xnio.XnioWorker;
 
 import co.casterlabs.katana.http.HttpListener;
 import co.casterlabs.katana.http.HttpResponse;
@@ -64,14 +65,19 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
         this.server = server;
     }
 
-    public UndertowServer(HttpServer server, int port, KeyManager[] keyManagers, TrustManager[] trustManagers, String[] tls) {
+    public UndertowServer(HttpServer server, int port, KeyManager[] keyManagers, TrustManager[] trustManagers, String[] tls, String[] cipherSuites) {
         //@formatter:off
         this.undertow = Undertow.builder()
                 .addHttpsListener(port, "0.0.0.0", keyManagers, trustManagers)
+                
                 .setHandler(Handlers.websocket(this, this))
+                
+                .setSocketOption(Options.SSL_ENABLED_CIPHER_SUITES, Sequence.of(cipherSuites))
+                .setSocketOption(Options.SSL_ENABLED_PROTOCOLS, Sequence.of(tls))
+               
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setServerOption(UndertowOptions.ALWAYS_SET_KEEP_ALIVE, false)
-                .setServerOption(Options.SSL_ENABLED_PROTOCOLS, Sequence.of(tls))
+                
                 .build();
         //@formatter:on
 

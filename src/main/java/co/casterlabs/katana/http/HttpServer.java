@@ -137,7 +137,7 @@ public class HttpServer implements Server {
                             TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                             trustManagerFactory.init(keystore);
 
-                            this.listener = new UndertowServer(this, 443, managerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), tls);
+                            this.listener = new UndertowServer(this, 443, managerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), tls, ssl.enabled_cipher_suites);
                             break;
 
                     }
