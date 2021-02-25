@@ -5,3 +5,4 @@ target*
 .classpath
 config.json
 config.json
+ssl.jks

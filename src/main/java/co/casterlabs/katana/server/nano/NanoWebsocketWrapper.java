@@ -47,8 +47,10 @@ public class NanoWebsocketWrapper extends WebSocket {
     }
 
     @Override
-    protected void onClose(CloseCode code, String reason, boolean initiatedByRemote) {
-        this.listener.onClose(this.katanaWebsocket);
+    protected void onClose(CloseCode code, String reason, boolean remote) {
+        if (remote) {
+            this.listener.onClose(this.katanaWebsocket);
+        }
     }
 
     @Override
@@ -103,9 +105,7 @@ public class NanoWebsocketWrapper extends WebSocket {
     }
 
     @Override
-    protected void onPong(WebSocketFrame pong) {
-
-    }
+    protected void onPong(WebSocketFrame pong) {}
 
     @Override
     protected void onException(IOException ignored) {}
@@ -124,7 +124,9 @@ public class NanoWebsocketWrapper extends WebSocket {
 
         @Override
         public void close(@NonNull WebsocketCloseCode code) throws IOException {
-            instance.close(CloseCode.find(code.getCode()), "", false);
+            try {
+                instance.close(CloseCode.find(code.getCode()), "", false);
+            } catch (Exception ignored) {}
         }
 
         // Request headers

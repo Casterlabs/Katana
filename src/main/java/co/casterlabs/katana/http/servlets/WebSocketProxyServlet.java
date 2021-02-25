@@ -3,6 +3,7 @@ package co.casterlabs.katana.http.servlets;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Map;
 
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
@@ -53,14 +54,18 @@ public class WebSocketProxyServlet extends HttpServlet {
                     URI uri = new URI(url);
 
                     return new WebsocketListener() {
-                        private RemoteWebSocketConnection client;
+                        private RemoteWebSocketConnection remote;
 
                         @Override
                         public void onOpen(Websocket websocket) {
-                            this.client = new RemoteWebSocketConnection(uri, websocket);
+                            this.remote = new RemoteWebSocketConnection(uri, websocket);
+
+                            for (Map.Entry<String, String> entry : session.getHeaders().entrySet()) {
+                                this.remote.addHeader(entry.getKey(), entry.getValue());
+                            }
 
                             try {
-                                if (!this.client.connectBlocking()) {
+                                if (!this.remote.connectBlocking()) {
                                     websocket.close(WebsocketCloseCode.NORMAL);
                                 }
                             } catch (IOException | InterruptedException e) {
@@ -70,17 +75,19 @@ public class WebSocketProxyServlet extends HttpServlet {
 
                         @Override
                         public void onText(Websocket websocket, String message) {
-                            this.client.send(message);
+                            this.remote.send(message);
                         }
 
                         @Override
                         public void onBinary(Websocket websocket, byte[] bytes) {
-                            this.client.send(bytes);
+                            this.remote.send(bytes);
                         }
 
                         @Override
                         public void onClose(Websocket websocket) {
-                            this.client.close();
+                            if (!this.remote.isClosing()) {
+                                this.remote.close();
+                            }
                         }
 
                     };

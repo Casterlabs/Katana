@@ -54,7 +54,7 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
     public UndertowServer(HttpServer server, int port) {
         //@formatter:off
         this.undertow = Undertow.builder()
-                .addHttpListener(port, "127.0.0.1")
+                .addHttpListener(port, "0.0.0.0")
                 .setHandler(Handlers.websocket(this, this))
                 .setServerOption(UndertowOptions.ALWAYS_SET_KEEP_ALIVE, false)
                 .build();
@@ -67,7 +67,7 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
     public UndertowServer(HttpServer server, int port, KeyManager[] keyManagers, TrustManager[] trustManagers, String[] tls) {
         //@formatter:off
         this.undertow = Undertow.builder()
-                .addHttpsListener(port, "127.0.0.1", keyManagers, trustManagers)
+                .addHttpsListener(port, "0.0.0.0", keyManagers, trustManagers)
                 .setHandler(Handlers.websocket(this, this))
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setServerOption(UndertowOptions.ALWAYS_SET_KEEP_ALIVE, false)
@@ -123,67 +123,60 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
                         }
 
                         in.close();
-                        exchange.getResponseSender().close();
-                    } catch (Exception e) {}
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 });
             }
         } catch (Exception e) {
-            exchange.getConnection().close();
             e.printStackTrace();
         }
     }
 
     @Override
     public void onConnect(WebSocketHttpExchange exchange, WebSocketChannel channel) {
-        try {
-            WebsocketSession session = new UndertowWebsocketSessionWrapper(exchange, channel, this.logger, this.port);
-            WebsocketListener listener = this.server.serveWebsocketSession(session.getHost(), session, this.secure);
+        WebsocketSession session = new UndertowWebsocketSessionWrapper(exchange, channel, this.logger, this.port);
+        WebsocketListener listener = this.server.serveWebsocketSession(session.getHost(), session, this.secure);
 
-            if (listener != null) {
-                Websocket websocket = new UndertowWebsocketChannelWrapper(channel, session);
+        if (listener == null) {
+            try {
+                channel.sendClose();
+            } catch (IOException ignored) {}
+        } else {
+            Websocket websocket = new UndertowWebsocketChannelWrapper(channel, session);
 
-                listener.onOpen(websocket);
+            listener.onOpen(websocket);
 
-                channel.getReceiveSetter().set(new AbstractReceiveListener() {
+            channel.getReceiveSetter().set(new AbstractReceiveListener() {
 
-                    @Override
-                    protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
-                        listener.onText(websocket, message.getData());
-                    }
-
-                    @SuppressWarnings("deprecation")
-                    @Override
-                    protected void onFullBinaryMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
-                        for (ByteBuffer buffer : message.getData().getResource()) {
-                            listener.onBinary(websocket, buffer.array());
-                        }
-                    }
-
-                    @Override
-                    protected void onClose(WebSocketChannel webSocketChannel, StreamSourceFrameChannel channel) throws IOException {
-                        listener.onClose(websocket);
-                        try {
-                            webSocketChannel.sendClose();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                    @Override
-                    protected void onError(WebSocketChannel channel, Throwable ignored) {}
-
-                });
-
-                channel.resumeReceives();
-            } else {
-                try {
-                    channel.sendClose();
-                } catch (IOException e) {
-                    e.printStackTrace();
+                @Override
+                protected void onFullTextMessage(WebSocketChannel channel, BufferedTextMessage message) {
+                    listener.onText(websocket, message.getData());
                 }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
+
+                @SuppressWarnings("deprecation")
+                @Override
+                protected void onFullBinaryMessage(WebSocketChannel channel, BufferedBinaryMessage message) {
+                    for (ByteBuffer buffer : message.getData().getResource()) {
+                        listener.onBinary(websocket, buffer.array());
+                    }
+                }
+
+                @Override
+                protected void onClose(WebSocketChannel webSocketChannel, StreamSourceFrameChannel channel) throws IOException {
+                    try {
+                        listener.onClose(websocket);
+
+                        webSocketChannel.sendClose();
+                    } catch (IOException ignored) {}
+                }
+
+                @Override
+                protected void onError(WebSocketChannel channel, Throwable ignored) {}
+
+            });
+
+            channel.resumeReceives();
         }
     }
 

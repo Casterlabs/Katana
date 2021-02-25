@@ -40,9 +40,11 @@ public class RemoteWebSocketConnection extends WebSocketClient {
 
     @Override
     public void onClose(int code, String reason, boolean remote) {
-        try {
-            this.client.close(WebsocketCloseCode.NORMAL);
-        } catch (Exception ignored) {}
+        if (remote) {
+            try {
+                this.client.close(WebsocketCloseCode.NORMAL);
+            } catch (IOException e) {}
+        }
     }
 
     @Override

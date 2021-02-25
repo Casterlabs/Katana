@@ -30,7 +30,9 @@ public class UndertowWebsocketChannelWrapper extends Websocket {
 
     @Override
     public void close(@NonNull WebsocketCloseCode code) throws IOException {
-        this.channel.sendClose();
+        try {
+            this.channel.sendClose();
+        } catch (IOException e) {}
     }
 
     @Override
