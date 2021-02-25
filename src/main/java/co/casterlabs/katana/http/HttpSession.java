@@ -20,7 +20,7 @@ public abstract class HttpSession {
     public abstract @NonNull Map<String, String> getHeaders();
 
     public @Nullable String getHeader(@NonNull String header) {
-        return this.getHeaders().get(header);
+        return this.getHeaders().get(header.toLowerCase());
     }
 
     // URI

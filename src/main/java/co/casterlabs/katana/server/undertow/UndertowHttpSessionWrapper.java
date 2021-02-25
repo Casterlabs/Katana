@@ -103,6 +103,7 @@ public class UndertowHttpSessionWrapper extends HttpSession {
             long length = this.exchange.getRequestContentLength();
 
             if (length != -1) {
+                // TODO Causes IO Errors.
                 this.exchange.startBlocking();
                 this.exchange.getInputStream().read(this.body, 0, (int) length);
 

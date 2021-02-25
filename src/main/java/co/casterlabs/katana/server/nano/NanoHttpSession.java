@@ -38,11 +38,6 @@ public class NanoHttpSession extends HttpSession {
         return this.nanoSession.getHeaders();
     }
 
-    @Override
-    public @Nullable String getHeader(@NonNull String header) {
-        return this.nanoSession.getHeaders().get(header.toLowerCase());
-    }
-
     // URI
     @Override
     public String getUri() {
