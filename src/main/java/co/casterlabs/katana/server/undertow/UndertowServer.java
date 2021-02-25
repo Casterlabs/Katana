@@ -11,7 +11,6 @@ import javax.net.ssl.TrustManager;
 
 import org.xnio.Options;
 import org.xnio.Sequence;
-import org.xnio.XnioWorker;
 
 import co.casterlabs.katana.http.HttpListener;
 import co.casterlabs.katana.http.HttpResponse;
@@ -27,6 +26,7 @@ import io.undertow.Undertow;
 import io.undertow.UndertowOptions;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.util.HttpString;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.AbstractReceiveListener;
@@ -56,7 +56,8 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
         //@formatter:off
         this.undertow = Undertow.builder()
                 .addHttpListener(port, "0.0.0.0")
-                .setHandler(Handlers.websocket(this, this))
+                .setHandler(new BlockingHandler(Handlers.websocket(this, this)))
+                .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setServerOption(UndertowOptions.ALWAYS_SET_KEEP_ALIVE, false)
                 .build();
         //@formatter:on
@@ -69,8 +70,8 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
         //@formatter:off
         this.undertow = Undertow.builder()
                 .addHttpsListener(port, "0.0.0.0", keyManagers, trustManagers)
-                
-                .setHandler(Handlers.websocket(this, this))
+
+                .setHandler(new BlockingHandler(Handlers.websocket(this, this)))
                 
                 .setSocketOption(Options.SSL_ENABLED_CIPHER_SUITES, Sequence.of(cipherSuites))
                 .setSocketOption(Options.SSL_ENABLED_PROTOCOLS, Sequence.of(tls))
@@ -114,25 +115,17 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
                 double time = (System.currentTimeMillis() - start) / 1000d;
                 this.logger.debug("Served HTTP %s %s %s (%.2fs)", session.getMethod().name(), session.getRemoteIpAddress(), session.getHost() + session.getUri(), time);
 
-                exchange.dispatch(() -> {
-                    try {
-                        exchange.startBlocking();
+                InputStream in = response.getResponseStream();
+                OutputStream out = exchange.getOutputStream();
 
-                        InputStream in = response.getResponseStream();
-                        OutputStream out = exchange.getOutputStream();
+                byte[] buffer = new byte[BUFFER_SIZE];
+                int len = 0;
 
-                        byte[] buffer = new byte[BUFFER_SIZE];
-                        int len = 0;
+                while ((len = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, len);
+                }
 
-                        while ((len = in.read(buffer)) != -1) {
-                            out.write(buffer, 0, len);
-                        }
-
-                        in.close();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                });
+                in.close();
             }
         } catch (Exception e) {
             e.printStackTrace();

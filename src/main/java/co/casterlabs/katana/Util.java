@@ -17,9 +17,6 @@ import co.casterlabs.katana.http.HttpResponse;
 import co.casterlabs.katana.http.HttpSession;
 import co.casterlabs.katana.http.HttpStatus;
 import co.casterlabs.katana.http.TLSVersion;
-import fi.iki.elonen.NanoHTTPD;
-import fi.iki.elonen.NanoHTTPD.Response;
-import fi.iki.elonen.NanoHTTPD.Response.Status;
 
 public class Util {
 
