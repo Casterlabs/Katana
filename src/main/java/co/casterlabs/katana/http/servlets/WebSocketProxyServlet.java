@@ -70,6 +70,9 @@ public class WebSocketProxyServlet extends HttpServlet {
                                 }
                             } catch (IOException | InterruptedException e) {
                                 e.printStackTrace();
+                                try {
+                                    websocket.close(WebsocketCloseCode.NORMAL);
+                                } catch (IOException ignored) {}
                             }
                         }
 
