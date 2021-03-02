@@ -110,7 +110,7 @@ public class NanoServer extends NanoWSD implements HttpListener {
         return new IStatus() {
             @Override
             public String getDescription() {
-                return status.getStatusCode() + " " + status.getDescription(); // What the hell Nano
+                return status.getStatusString(); // What the hell Nano
             }
 
             @Override

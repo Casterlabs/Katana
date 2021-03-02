@@ -6,3 +6,4 @@ target*
 config.json
 config.json
 ssl.jks
+src/main/java/co/casterlabs/katana/Test.java

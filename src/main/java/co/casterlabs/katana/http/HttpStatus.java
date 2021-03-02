@@ -1,16 +1,13 @@
 package co.casterlabs.katana.http;
 
-import java.util.HashMap;
-import java.util.Map;
+import org.jetbrains.annotations.Nullable;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NonNull;
 
 // Source: https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
 @Getter
 @NonNull
-@AllArgsConstructor
 public enum HttpStatus {
     // 100: Continue
     // 101: Switching Protocols
@@ -94,24 +91,36 @@ public enum HttpStatus {
 
     ;
 
-    private static final Map<Integer, HttpStatus> STATUS_BY_CODE = new HashMap<>(HttpStatus.values().length);
+    // TODO make sure this is always tied to the max status code value.
+    private static final HttpStatus[] STATUS_BY_CODE = new HttpStatus[600];
 
     static {
         for (HttpStatus status : HttpStatus.values()) {
-            STATUS_BY_CODE.put(status.statusCode, status);
+            STATUS_BY_CODE[status.statusCode] = status;
         }
     }
 
+    private String statusString;
     private String description;
     private int statusCode;
 
-    public static HttpStatus lookup(int code) {
-        return STATUS_BY_CODE.get(code);
+    private HttpStatus(String description, int statusCode) {
+        this.statusString = statusCode + " " + description;
+        this.description = description;
+        this.statusCode = statusCode;
+    }
+
+    public static @Nullable HttpStatus lookup(int code) {
+        try {
+            return STATUS_BY_CODE[code];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return null;
+        }
     }
 
     @Override
     public String toString() {
-        return this.statusCode + ": " + this.description;
+        return this.statusString;
     }
 
 }

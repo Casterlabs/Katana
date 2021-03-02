@@ -28,6 +28,7 @@ import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.BlockingHandler;
 import io.undertow.util.HttpString;
+import io.undertow.util.Protocols;
 import io.undertow.websockets.WebSocketConnectionCallback;
 import io.undertow.websockets.core.AbstractReceiveListener;
 import io.undertow.websockets.core.BufferedBinaryMessage;
@@ -38,6 +39,7 @@ import io.undertow.websockets.spi.WebSocketHttpExchange;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class UndertowServer implements HttpListener, HttpHandler, WebSocketConnectionCallback {
+    private static final HttpString HTTP_2_STATUS_DESCRIPTION = HttpString.tryFromString("x-http-status-description");
     private static final int BUFFER_SIZE = 4096;
 
     private FastLogger logger = new FastLogger();
@@ -52,12 +54,14 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
         System.setProperty("org.jboss.logging.provider", "slf4j"); // This mutes it.
     }
 
+    @SuppressWarnings("deprecation")
     public UndertowServer(HttpServer server, int port) {
         //@formatter:off
         this.undertow = Undertow.builder()
                 .addHttpListener(port, "0.0.0.0")
                 .setHandler(new BlockingHandler(Handlers.websocket(this, this)))
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
+                .setServerOption(UndertowOptions.ENABLE_SPDY, true)
                 .setServerOption(UndertowOptions.ALWAYS_SET_KEEP_ALIVE, false)
                 .build();
         //@formatter:on
@@ -66,6 +70,7 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
         this.server = server;
     }
 
+    @SuppressWarnings("deprecation")
     public UndertowServer(HttpServer server, int port, KeyManager[] keyManagers, TrustManager[] trustManagers, String[] tls, String[] cipherSuites) {
         //@formatter:off
         this.undertow = Undertow.builder()
@@ -77,6 +82,7 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
                 .setSocketOption(Options.SSL_ENABLED_PROTOCOLS, Sequence.of(tls))
                
                 .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
+                .setServerOption(UndertowOptions.ENABLE_SPDY, true)
                 .setServerOption(UndertowOptions.ALWAYS_SET_KEEP_ALIVE, false)
                 
                 .build();
@@ -102,7 +108,13 @@ public class UndertowServer implements HttpListener, HttpHandler, WebSocketConne
                 exchange.getConnection().close();
             } else {
                 exchange.setStatusCode(response.getStatus().getStatusCode());
-                exchange.setReasonPhrase(response.getStatus().getDescription());
+
+                // HTTP/2 doesn't have a status description, so we transfer it "manually".
+                if (exchange.getProtocol().equals(Protocols.HTTP_2_0)) {
+                    exchange.getResponseHeaders().add(HTTP_2_STATUS_DESCRIPTION, response.getStatus().getDescription());
+                } else {
+                    exchange.setReasonPhrase(response.getStatus().getDescription());
+                }
 
                 for (Map.Entry<String, String> entry : response.getAllHeaders().entrySet()) {
                     exchange.getResponseHeaders().add(HttpString.tryFromString(entry.getKey()), entry.getValue());
