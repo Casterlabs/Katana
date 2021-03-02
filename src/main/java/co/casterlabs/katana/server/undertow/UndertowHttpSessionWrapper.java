@@ -14,6 +14,9 @@ import org.jetbrains.annotations.Nullable;
 import co.casterlabs.katana.http.HttpMethod;
 import co.casterlabs.katana.http.HttpSession;
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.form.FormData;
+import io.undertow.server.handlers.form.FormDataParser;
+import io.undertow.server.handlers.form.FormParserFactory;
 import io.undertow.util.HeaderMap;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
@@ -117,7 +120,26 @@ public class UndertowHttpSessionWrapper extends HttpSession {
 
     @Override
     public @NonNull Map<String, String> parseFormBody() throws IOException {
-        throw new UnsupportedOperationException(); // TODO
+        FormDataParser formDataParser = FormParserFactory.builder().build().createParser(this.exchange);
+
+        if (formDataParser == null) {
+            throw new IOException("No form data to parse.");
+        } else {
+            Map<String, String> files = new HashMap<>();
+
+            this.exchange.startBlocking();
+
+            FormData formData = formDataParser.parseBlocking();
+
+            for (String data : formData) {
+                for (FormData.FormValue formValue : formData.get(data)) {
+                    files.put(data, formValue.getValue());
+                    break;
+                }
+            }
+
+            return files;
+        }
     }
 
     // Server Info
