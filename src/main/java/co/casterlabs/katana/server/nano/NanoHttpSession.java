@@ -89,12 +89,16 @@ public class NanoHttpSession extends HttpSession {
     }
 
     @Override
-    public @NonNull Map<String, String> parseFormBody() throws IOException, ResponseException {
-        Map<String, String> files = new HashMap<>();
+    public @NonNull Map<String, String> parseFormBody() throws IOException {
+        try {
+            Map<String, String> files = new HashMap<>();
 
-        this.nanoSession.parseBody(files);
+            this.nanoSession.parseBody(files);
 
-        return files;
+            return files;
+        } catch (ResponseException e) {
+            throw new IOException(e);
+        }
     }
 
     // Server info

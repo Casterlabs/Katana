@@ -10,7 +10,6 @@ import org.jetbrains.annotations.Nullable;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.miki.Miki;
-import fi.iki.elonen.NanoHTTPD.ResponseException;
 import lombok.NonNull;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
@@ -45,7 +44,7 @@ public abstract class HttpSession {
 
     public abstract @Nullable byte[] getRequestBodyBytes() throws IOException;
 
-    public abstract @NonNull Map<String, String> parseFormBody() throws IOException, ResponseException;
+    public abstract @NonNull Map<String, String> parseFormBody() throws IOException;
 
     // Server info
     public abstract @NonNull String getHost();
