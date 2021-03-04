@@ -10,9 +10,9 @@ import com.google.gson.annotations.SerializedName;
 import co.casterlabs.katana.FileUtil;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
-import co.casterlabs.katana.http.HttpResponse;
-import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.katana.http.HttpStatus;
+import co.casterlabs.rakurai.io.http.HttpResponse;
+import co.casterlabs.rakurai.io.http.HttpSession;
+import co.casterlabs.rakurai.io.http.StandardHttpStatus;
 import lombok.SneakyThrows;
 
 public class StaticServlet extends HttpServlet {
@@ -55,21 +55,19 @@ public class StaticServlet extends HttpServlet {
                         String extension = file.getName().substring(index + 1);
 
                         if (extension.equalsIgnoreCase("miki")) {
-                            return FileServlet.serveMiki(session, file);
+                            return FileUtil.serveMiki(session, file);
                         }
                     }
 
                     return FileUtil.sendFile(file, session);
                 } else {
-                    return Util.errorResponse(session, HttpStatus.NOT_FOUND, "File not found.");
+                    return Util.errorResponse(session, StandardHttpStatus.NOT_FOUND, "File not found.");
                 }
             } catch (Exception e) {
-                session.getLogger().severe("An error occured whilst reading a file.");
-                session.getLogger().exception(e);
-                return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "Unable to read file.");
+                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Unable to read file.");
             }
         } else {
-            return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "Serve directory not set.");
+            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Serve directory not set.");
         }
     }
 

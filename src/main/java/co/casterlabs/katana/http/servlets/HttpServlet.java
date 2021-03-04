@@ -5,10 +5,10 @@ import java.util.List;
 
 import com.google.gson.JsonObject;
 
-import co.casterlabs.katana.http.HttpResponse;
-import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.katana.http.websocket.WebsocketListener;
-import co.casterlabs.katana.http.websocket.WebsocketSession;
+import co.casterlabs.rakurai.io.http.HttpResponse;
+import co.casterlabs.rakurai.io.http.HttpSession;
+import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
+import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -26,10 +26,12 @@ public abstract class HttpServlet {
 
     public abstract void init(JsonObject config);
 
+    /* Override */
     public HttpResponse serveHttp(HttpSession session) {
         return null;
     }
 
+    /* Override */
     public WebsocketListener serveWebsocket(WebsocketSession session) {
         return null;
     }

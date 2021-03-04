@@ -13,22 +13,11 @@ import org.apache.commons.collections4.MultiValuedMap;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
-import co.casterlabs.katana.http.HttpResponse;
-import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.katana.http.HttpStatus;
-import co.casterlabs.katana.http.TLSVersion;
+import co.casterlabs.rakurai.io.http.HttpResponse;
+import co.casterlabs.rakurai.io.http.HttpSession;
+import co.casterlabs.rakurai.io.http.HttpStatus;
 
 public class Util {
-
-    public static String[] convertTLS(TLSVersion[] tls) {
-        String[] versions = new String[tls.length];
-
-        for (int i = 0; i != tls.length; i++) {
-            versions[i] = tls[i].getRuntimeName();
-        }
-
-        return versions;
-    }
 
     public static <T extends Collection<String>> T fillFromJson(JsonArray array, T collection) {
         if (array.isJsonArray()) {

@@ -3,16 +3,20 @@ package co.casterlabs.katana.http.servlets;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.Map;
+
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
 
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
-import co.casterlabs.katana.http.websocket.Websocket;
-import co.casterlabs.katana.http.websocket.WebsocketCloseCode;
-import co.casterlabs.katana.http.websocket.WebsocketListener;
-import co.casterlabs.katana.http.websocket.WebsocketSession;
+import co.casterlabs.rakurai.io.http.websocket.Websocket;
+import co.casterlabs.rakurai.io.http.websocket.WebsocketCloseCode;
+import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
+import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
 
 public class WebSocketProxyServlet extends HttpServlet {
     private HostConfiguration config;
@@ -40,7 +44,7 @@ public class WebSocketProxyServlet extends HttpServlet {
     @Override
     public WebsocketListener serveWebsocket(WebsocketSession session) {
         if (this.config.proxyUrl != null) {
-            if ((this.config.proxyPath != null) && !session.getUri().equalsIgnoreCase(this.config.proxyPath)) {
+            if ((this.config.proxyPath != null) && !session.getUri().matches(this.config.proxyPath)) {
                 return null;
             } else {
                 String url = this.config.proxyUrl;
@@ -69,7 +73,6 @@ public class WebSocketProxyServlet extends HttpServlet {
                                     websocket.close(WebsocketCloseCode.NORMAL);
                                 }
                             } catch (IOException | InterruptedException e) {
-                                e.printStackTrace();
                                 try {
                                     websocket.close(WebsocketCloseCode.NORMAL);
                                 } catch (IOException ignored) {}
@@ -102,6 +105,46 @@ public class WebSocketProxyServlet extends HttpServlet {
         }
 
         return null;
+    }
+
+    private static class RemoteWebSocketConnection extends WebSocketClient {
+        private Websocket client;
+
+        public RemoteWebSocketConnection(URI serverUri, Websocket client) {
+            super(serverUri);
+
+            this.setTcpNoDelay(true);
+
+            this.client = client;
+        }
+
+        @Override
+        public void onOpen(ServerHandshake handshakedata) {}
+
+        @Override
+        public void onMessage(String message) {
+            try {
+                this.client.send(message);
+            } catch (IOException e) {}
+        }
+
+        @Override
+        public void onMessage(ByteBuffer message) {
+            try {
+                this.client.send(message.array());
+            } catch (IOException e) {}
+        }
+
+        @Override
+        public void onClose(int code, String reason, boolean remote) {
+            try {
+                this.client.close(WebsocketCloseCode.NORMAL);
+            } catch (IOException e) {}
+        }
+
+        @Override
+        public void onError(Exception e) {}
+
     }
 
 }

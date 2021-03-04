@@ -2,12 +2,19 @@ package co.casterlabs.katana;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import co.casterlabs.katana.http.HttpResponse;
-import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.katana.http.HttpStatus;
-import co.casterlabs.katana.http.MimeTypes;
+import co.casterlabs.miki.Miki;
+import co.casterlabs.miki.json.MikiFileAdapter;
+import co.casterlabs.miki.templating.WebRequest;
+import co.casterlabs.miki.templating.WebResponse;
+import co.casterlabs.rakurai.io.http.HttpResponse;
+import co.casterlabs.rakurai.io.http.HttpSession;
+import co.casterlabs.rakurai.io.http.MimeTypes;
+import co.casterlabs.rakurai.io.http.StandardHttpStatus;
 
 public class FileUtil {
 
@@ -38,7 +45,7 @@ public class FileUtil {
 
             if ((range != null) && (startFrom >= 0)) {
                 if (startFrom >= fileLen) {
-                    response = HttpResponse.newFixedLengthResponse(HttpStatus.RANGE_NOT_SATISFIABLE, new byte[0]);
+                    response = HttpResponse.newFixedLengthResponse(StandardHttpStatus.RANGE_NOT_SATISFIABLE, new byte[0]);
 
                     response.putHeader("Content-Range", "bytes 0-0/" + fileLen);
 
@@ -49,17 +56,17 @@ public class FileUtil {
                     if (newLen < 0) newLen = 0;
                     long dataLen = newLen;
 
-                    response = HttpResponse.newFixedLengthFileResponse(HttpStatus.PARTIAL_CONTENT, file, startFrom, dataLen);
+                    response = HttpResponse.newFixedLengthFileResponse(StandardHttpStatus.PARTIAL_CONTENT, file, startFrom, dataLen);
 
                     response.putHeader("Content-Range", "bytes " + startFrom + "-" + endAt + "/" + fileLen);
                 }
             } else {
                 if ((range != null) && etag.equals(session.getHeaders().get("if-none-match"))) {
-                    response = HttpResponse.newFixedLengthResponse(HttpStatus.RANGE_NOT_SATISFIABLE, new byte[0]);
+                    response = HttpResponse.newFixedLengthResponse(StandardHttpStatus.RANGE_NOT_SATISFIABLE, new byte[0]);
 
                     response.putHeader("Content-Range", "bytes 0-0/" + fileLen);
                 } else {
-                    response = HttpResponse.newFixedLengthFileResponse(HttpStatus.OK, file);
+                    response = HttpResponse.newFixedLengthFileResponse(StandardHttpStatus.OK, file);
                 }
             }
 
@@ -72,7 +79,7 @@ public class FileUtil {
 
             return response;
         } catch (IOException e) {
-            return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "Error while reading file (exists)");
+            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Error while reading file (exists)");
         }
     }
 
@@ -101,6 +108,54 @@ public class FileUtil {
         }
 
         return file;
+    }
+
+    public static HttpResponse serveMiki(HttpSession session, File file) {
+        try {
+            MikiFileAdapter miki = MikiFileAdapter.readFile(file);
+            WebRequest request = new WebRequest(session.getQueryParameters(), session.getHeaders(), session.getHost(), session.getMethod().name(), session.getUri(), session.getRequestBody(), session.getPort());
+
+            WebResponse response = miki.formatAsWeb(getMikiGlobals(session), request);
+
+            HttpResponse result = HttpResponse.newFixedLengthResponse(StandardHttpStatus.lookup(response.getStatus()), response.getResult());
+
+            if (response.getMime() == null) {
+                if (miki.getTemplateFile() != null) {
+                    result.setMimeType(Files.probeContentType(new File(miki.getTemplateFile()).toPath()));
+                }
+            } else {
+                result.setMimeType(response.getMime());
+            }
+
+            result.putAllHeaders(response.getHeaders());
+
+            return result;
+        } catch (Exception e) {
+            if (e.getCause() != null) {
+                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, e.getMessage() + "<br />" + e.getCause().getMessage());
+            } else {
+                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, e.getMessage());
+            }
+        }
+    }
+
+    public static Map<String, String> getMikiGlobals(HttpSession session) {
+        Map<String, String> globals = new HashMap<String, String>() {
+            private static final long serialVersionUID = -902644615560162682L;
+
+            @Override
+            public String get(Object key) {
+                return super.get(((String) key).toLowerCase());
+            }
+        };
+
+        globals.put("server", Katana.SERVER_DECLARATION);
+        globals.put("miki", String.format("Miki/%s (Katana/%s)", Miki.VERSION, Katana.VERSION));
+
+        globals.put("remote_ip_address", session.getRemoteIpAddress());
+        globals.put("host", session.getHost());
+
+        return globals;
     }
 
 }

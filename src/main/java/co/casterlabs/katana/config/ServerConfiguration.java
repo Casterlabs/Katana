@@ -9,6 +9,7 @@ import com.google.gson.JsonObject;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.http.servlets.HttpServlet;
+import co.casterlabs.rakurai.io.http.TLSVersion;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Setter;
@@ -66,6 +67,21 @@ public class ServerConfiguration {
         Collections.sort(this.servlets, (HttpServlet s1, HttpServlet s2) -> {
             return s1.getPriority() > s2.getPriority() ? -1 : 1;
         });
+    }
+
+    public static class SSLConfiguration {
+        public boolean enabled = false;
+
+        public TLSVersion[] tls = TLSVersion.values();
+        public String[] enabled_cipher_suites = null; // Null = All Available
+        public boolean allow_insecure = true;
+        public boolean force = false;
+        public int dh_size = 2048;
+        public int port = 443;
+
+        public String keystore_password = "";
+        public String keystore = "";
+
     }
 
 }

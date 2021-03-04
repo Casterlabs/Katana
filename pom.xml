@@ -81,15 +81,9 @@
         </dependency>
 
         <dependency>
-            <groupId>io.undertow</groupId>
-            <artifactId>undertow-core</artifactId>
-            <version>2.1.0.Final</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.nanohttpd</groupId>
-            <artifactId>nanohttpd-websocket</artifactId>
-            <version>2.3.1</version>
+            <groupId>com.github.casterlabs</groupId>
+            <artifactId>Rakurai</artifactId>
+            <version>681320d</version>
             <scope>compile</scope>
         </dependency>
 

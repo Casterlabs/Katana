@@ -8,9 +8,10 @@ import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
-import co.casterlabs.katana.http.HttpResponse;
-import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.katana.http.HttpStatus;
+import co.casterlabs.rakurai.io.http.HttpResponse;
+import co.casterlabs.rakurai.io.http.HttpSession;
+import co.casterlabs.rakurai.io.http.HttpStatus;
+import co.casterlabs.rakurai.io.http.StandardHttpStatus;
 import kotlin.Pair;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -85,7 +86,7 @@ public class ProxyServlet extends HttpServlet {
                     Request request = builder.build();
                     Response response = client.newCall(request).execute();
 
-                    HttpStatus status = HttpStatus.lookup(response.code());
+                    HttpStatus status = StandardHttpStatus.lookup(response.code());
                     long responseLen = response.body().contentLength();
 
                     //@formatter:off
@@ -112,7 +113,7 @@ public class ProxyServlet extends HttpServlet {
                 return null;
             }
         } else {
-            return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "Proxy url not set.");
+            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Proxy url not set.");
         }
     }
 

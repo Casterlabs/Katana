@@ -11,9 +11,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
 import co.casterlabs.katana.config.ServerConfiguration;
-import co.casterlabs.katana.http.HttpServer;
+import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.katana.http.servlets.HttpServlet;
-import co.casterlabs.katana.server.Server;
 import lombok.Getter;
 import xyz.e3ndr.consolidate.CommandRegistry;
 import xyz.e3ndr.consolidate.exception.ArgumentsLengthException;
@@ -25,12 +24,15 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 public class Katana {
     public static final String ERROR_HTML = "<!DOCTYPE html><html><head><title>$RESPONSECODE</title></head><body><h1>$RESPONSECODE</h1><p>$DESCRIPTION</p><br/><p><i>Running Casterlabs Katana, $ADDRESS</i></p></body></html>";
     public static final String VERSION = "1.14.0";
+    public static final String SERVER_DECLARATION = String.format("Katana/%s (%s)", Katana.VERSION, System.getProperty("os.name", "Generic"));
+
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private Map<String, Class<? extends HttpServlet>> servlets = new HashMap<>();
     private CommandRegistry<Void> commandRegistry = new CommandRegistry<>();
-    private Map<String, Server> servers = new HashMap<>();
     private FastLogger logger = new FastLogger();
+
+    private Map<String, HttpRouter> routers = new HashMap<>();
     private Launcher launcher;
 
     public Katana(Launcher launcher) {
@@ -69,10 +71,10 @@ public class Katana {
     }
 
     public void addConfiguration(ServerConfiguration config) throws Exception {
-        if (this.servers.containsKey(config.getName())) {
-            this.servers.get(config.getName()).loadConfig(config);
+        if (this.routers.containsKey(config.getName())) {
+            this.routers.get(config.getName()).loadConfig(config);
         } else {
-            this.servers.put(config.getName(), new HttpServer(config, this));
+            this.routers.put(config.getName(), new HttpRouter(config, this));
         }
     }
 
@@ -95,7 +97,7 @@ public class Katana {
     }
 
     public void start() {
-        for (Server server : this.servers.values()) {
+        for (HttpRouter server : this.routers.values()) {
             if (!server.isRunning()) {
                 server.start();
 
@@ -117,7 +119,7 @@ public class Katana {
     }
 
     public void stop() {
-        for (Server server : this.servers.values()) {
+        for (HttpRouter server : this.routers.values()) {
             if (server.isRunning()) {
                 server.stop();
             }
@@ -125,7 +127,7 @@ public class Katana {
     }
 
     public boolean isRunning() {
-        for (Server server : this.servers.values()) {
+        for (HttpRouter server : this.routers.values()) {
             if (server.isRunning()) {
                 return true;
             }

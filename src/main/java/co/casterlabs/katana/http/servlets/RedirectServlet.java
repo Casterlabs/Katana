@@ -5,9 +5,9 @@ import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
-import co.casterlabs.katana.http.HttpResponse;
-import co.casterlabs.katana.http.HttpSession;
-import co.casterlabs.katana.http.HttpStatus;
+import co.casterlabs.rakurai.io.http.HttpResponse;
+import co.casterlabs.rakurai.io.http.HttpSession;
+import co.casterlabs.rakurai.io.http.StandardHttpStatus;
 import lombok.SneakyThrows;
 
 public class RedirectServlet extends HttpServlet {
@@ -35,7 +35,7 @@ public class RedirectServlet extends HttpServlet {
     @Override
     public HttpResponse serveHttp(HttpSession session) {
         if (this.config.redirectUrl != null) {
-            HttpResponse response = HttpResponse.newFixedLengthResponse(HttpStatus.TEMPORARY_REDIRECT, new byte[0]);
+            HttpResponse response = HttpResponse.newFixedLengthResponse(StandardHttpStatus.TEMPORARY_REDIRECT, new byte[0]);
 
             if (this.config.includePath) {
                 response.putHeader("location", this.config.redirectUrl + session.getUri());
@@ -45,7 +45,7 @@ public class RedirectServlet extends HttpServlet {
 
             return response;
         } else {
-            return Util.errorResponse(session, HttpStatus.INTERNAL_ERROR, "Redirect url not set.");
+            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Redirect url not set.");
         }
     }
 
