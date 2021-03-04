@@ -80,6 +80,7 @@ public class ProxyServlet extends HttpServlet {
                     }
 
                     if (this.config.forwardIp) {
+                        builder.addHeader("x-remote-ip", session.getRemoteIpAddress());
                         builder.addHeader("x-katana-ip", session.getRemoteIpAddress());
                     }
 
