@@ -49,7 +49,6 @@ public class Katana {
                     try {
                         commandRegistry.execute(in.nextLine());
                     } catch (CommandNameException | CommandExecutionException | ArgumentsLengthException e) {
-                        e.printStackTrace();
                         logger.exception(e);
                     }
                 }
