@@ -162,7 +162,7 @@ public class HttpRouter implements HttpListener {
 
                 return response;
             } else {
-                return Util.errorResponse(session, StandardHttpStatus.FORBIDDEN, "Insecure connections are not allowed.");
+                return Util.errorResponse(session, StandardHttpStatus.FORBIDDEN, "Insecure connections are not allowed.", this.config);
             }
         } else {
             Collection<HttpServlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
@@ -189,7 +189,7 @@ public class HttpRouter implements HttpListener {
 
                 return response;
             } else {
-                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "No servlet available.");
+                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "No servlet available.", this.config);
             }
         }
     }
@@ -206,7 +206,7 @@ public class HttpRouter implements HttpListener {
         HttpResponse response = null;
 
         for (HttpServlet servlet : servlets) {
-            response = servlet.serveHttp(session);
+            response = servlet.serveHttp(session, this);
 
             if (response != null) {
                 break;
@@ -220,7 +220,7 @@ public class HttpRouter implements HttpListener {
         WebsocketListener response = null;
 
         for (HttpServlet servlet : servlets) {
-            response = servlet.serveWebsocket(session);
+            response = servlet.serveWebsocket(session, this);
 
             if (response != null) {
                 break;

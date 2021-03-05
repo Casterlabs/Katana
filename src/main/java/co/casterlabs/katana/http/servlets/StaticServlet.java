@@ -10,6 +10,7 @@ import com.google.gson.annotations.SerializedName;
 import co.casterlabs.katana.FileUtil;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
+import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
@@ -42,32 +43,26 @@ public class StaticServlet extends HttpServlet {
 
     @SneakyThrows
     @Override
-    public HttpResponse serveHttp(HttpSession session) {
+    public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         if (this.config.directory != null) {
             File directory = new File(this.config.directory);
             File file = FileUtil.getFile(directory, session.getUri().replace('\\', '/'), this.config.requireFileExtensions, defaultFiles);
 
             try {
                 if (file.getCanonicalPath().startsWith(directory.getCanonicalPath()) && file.exists() && file.isFile()) {
-                    int index = file.getName().lastIndexOf('.');
-
-                    if (this.config.useMiki && (index != 0)) {
-                        String extension = file.getName().substring(index + 1);
-
-                        if (extension.equalsIgnoreCase("miki")) {
-                            return FileUtil.serveMiki(session, file);
-                        }
+                    if (this.config.useMiki && FileUtil.isMiki(file)) {
+                        return FileUtil.serveMiki(session, file, StandardHttpStatus.OK);
+                    } else {
+                        return FileUtil.serveFile(file, session);
                     }
-
-                    return FileUtil.sendFile(file, session);
                 } else {
-                    return Util.errorResponse(session, StandardHttpStatus.NOT_FOUND, "File not found.");
+                    return Util.errorResponse(session, StandardHttpStatus.NOT_FOUND, "File not found.", router.getConfig());
                 }
             } catch (Exception e) {
-                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Unable to read file.");
+                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Unable to read file.", router.getConfig());
             }
         } else {
-            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Serve directory not set.");
+            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Serve directory not set.", router.getConfig());
         }
     }
 

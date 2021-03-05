@@ -13,12 +13,14 @@ import co.casterlabs.miki.templating.WebRequest;
 import co.casterlabs.miki.templating.WebResponse;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
+import co.casterlabs.rakurai.io.http.HttpStatus;
 import co.casterlabs.rakurai.io.http.MimeTypes;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
+import xyz.e3ndr.fastloggingframework.logging.LoggingUtil;
 
 public class FileUtil {
 
-    public static HttpResponse sendFile(File file, HttpSession session) {
+    public static HttpResponse serveFile(File file, HttpSession session) {
         try {
             String etag = Integer.toHexString((file.getAbsolutePath() + file.lastModified() + "" + file.length()).hashCode());
             String mime = MimeTypes.getMimeForFile(file);
@@ -79,8 +81,22 @@ public class FileUtil {
 
             return response;
         } catch (IOException e) {
-            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Error while reading file (exists)");
+            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Error while reading file (exists)", null);
         }
+    }
+
+    public static boolean isMiki(File file) {
+        int index = file.getName().lastIndexOf('.');
+
+        if (index > 0) {
+            String extension = file.getName().substring(index + 1);
+
+            if (extension.equalsIgnoreCase("miki")) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static File getFile(File directory, String rawUri, boolean requireFileExtensions, List<String> defaultFiles) {
@@ -110,12 +126,12 @@ public class FileUtil {
         return file;
     }
 
-    public static HttpResponse serveMiki(HttpSession session, File file) {
+    public static HttpResponse serveMiki(HttpSession session, File file, HttpStatus status) {
         try {
             MikiFileAdapter miki = MikiFileAdapter.readFile(file);
             WebRequest request = new WebRequest(session.getQueryParameters(), session.getHeaders(), session.getHost(), session.getMethod().name(), session.getUri(), session.getRequestBody(), session.getPort());
 
-            WebResponse response = miki.formatAsWeb(getMikiGlobals(session), request);
+            WebResponse response = miki.formatAsWeb(getMikiGlobals(session, status), request);
 
             HttpResponse result = HttpResponse.newFixedLengthResponse(StandardHttpStatus.lookup(response.getStatus()), response.getResult());
 
@@ -131,15 +147,11 @@ public class FileUtil {
 
             return result;
         } catch (Exception e) {
-            if (e.getCause() != null) {
-                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, e.getMessage() + "<br />" + e.getCause().getMessage());
-            } else {
-                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, e.getMessage());
-            }
+            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, LoggingUtil.getExceptionStack(e), null);
         }
     }
 
-    public static Map<String, String> getMikiGlobals(HttpSession session) {
+    public static Map<String, String> getMikiGlobals(HttpSession session, HttpStatus status) {
         Map<String, String> globals = new HashMap<String, String>() {
             private static final long serialVersionUID = -902644615560162682L;
 
@@ -154,6 +166,10 @@ public class FileUtil {
 
         globals.put("remote_ip_address", session.getRemoteIpAddress());
         globals.put("host", session.getHost());
+
+        globals.put("status_code", String.valueOf(status.getStatusCode()));
+        globals.put("status_message", status.getDescription());
+        globals.put("status", status.getDescription().toUpperCase().replace(' ', '_'));
 
         return globals;
     }

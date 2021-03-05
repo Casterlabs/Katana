@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.google.gson.JsonObject;
 
+import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
@@ -27,12 +28,12 @@ public abstract class HttpServlet {
     public abstract void init(JsonObject config);
 
     /* Override */
-    public HttpResponse serveHttp(HttpSession session) {
+    public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         return null;
     }
 
     /* Override */
-    public WebsocketListener serveWebsocket(WebsocketSession session) {
+    public WebsocketListener serveWebsocket(WebsocketSession session, HttpRouter router) {
         return null;
     }
 

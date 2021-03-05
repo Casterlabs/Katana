@@ -9,10 +9,12 @@ import java.util.Collection;
 import java.util.Map.Entry;
 
 import org.apache.commons.collections4.MultiValuedMap;
+import org.jetbrains.annotations.Nullable;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 
+import co.casterlabs.katana.config.ServerConfiguration;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
@@ -53,7 +55,23 @@ public class Util {
         return false;
     }
 
-    public static HttpResponse errorResponse(HttpSession session, HttpStatus status, String description) {
+    public static HttpResponse errorResponse(HttpSession session, HttpStatus status, String description, @Nullable ServerConfiguration config) {
+        if (config != null) {
+            String potential = config.getErrorResponses().get(String.valueOf(status.getStatusCode()));
+
+            if (potential != null) {
+                File file = new File(potential);
+
+                if (file.exists()) {
+                    if (FileUtil.isMiki(file)) {
+                        return FileUtil.serveMiki(session, file, status);
+                    } else {
+                        return FileUtil.serveFile(file, session);
+                    }
+                }
+            }
+        }
+
         // @formatter:off
         return HttpResponse.newFixedLengthResponse(status, Katana.ERROR_HTML
                 .replace("$RESPONSECODE", String.valueOf(status.getStatusCode()))

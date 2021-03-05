@@ -8,6 +8,7 @@ import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
+import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
@@ -52,7 +53,7 @@ public class ProxyServlet extends HttpServlet {
     }
 
     @Override
-    public HttpResponse serveHttp(HttpSession session) {
+    public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         if (this.config.proxyUrl != null) {
             if ((this.config.proxyPath == null) || session.getUri().matches(this.config.proxyPath)) {
                 String url = this.config.proxyUrl;
@@ -73,8 +74,8 @@ public class ProxyServlet extends HttpServlet {
 
                     for (Map.Entry<String, String> header : session.getHeaders().entrySet()) {
                         String key = header.getKey();
-                        // Prevent Nano headers from being injected
-                        if (!key.equalsIgnoreCase("x-katana-ip") && !key.equalsIgnoreCase("remote-addr") && !key.equalsIgnoreCase("http-client-ip") && !key.equalsIgnoreCase("host")) {
+
+                        if (!key.equalsIgnoreCase("remote-addr") && !key.equalsIgnoreCase("http-client-ip") && !key.equalsIgnoreCase("host")) {
                             builder.addHeader(key, header.getValue());
                         }
                     }
@@ -114,7 +115,7 @@ public class ProxyServlet extends HttpServlet {
                 return null;
             }
         } else {
-            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Proxy url not set.");
+            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Proxy url not set.", router.getConfig());
         }
     }
 

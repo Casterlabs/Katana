@@ -13,6 +13,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
 
 import co.casterlabs.katana.Katana;
+import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.websocket.Websocket;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketCloseCode;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
@@ -42,7 +43,7 @@ public class WebSocketProxyServlet extends HttpServlet {
     }
 
     @Override
-    public WebsocketListener serveWebsocket(WebsocketSession session) {
+    public WebsocketListener serveWebsocket(WebsocketSession session, HttpRouter router) {
         if (this.config.proxyUrl != null) {
             if ((this.config.proxyPath != null) && !session.getUri().matches(this.config.proxyPath)) {
                 return null;
