@@ -42,7 +42,7 @@ public class Launcher implements Runnable {
             "-s",
             "--server-implementation"
     }, description = "Sets the desired server implementation")
-    private HttpServerImplementation implementation = HttpServerImplementation.NANO;
+    private HttpServerImplementation implementation = HttpServerImplementation.UNDERTOW;
 
     public static void main(String[] args) {
         new CommandLine(new Launcher()).execute(args);
