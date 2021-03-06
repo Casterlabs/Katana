@@ -98,8 +98,9 @@ public class HttpRouter implements HttpListener {
                     rakurai.setEnabledTlsVersions(ssl.tls);
                     rakurai.setPort(ssl.port);
 
-                    this.forceHttps = ssl.force;
+                    builder.setSsl(rakurai);
 
+                    this.forceHttps = ssl.force;
                     this.serverSecure = builder.buildSecure(this);
                 }
             } catch (Exception e) {
