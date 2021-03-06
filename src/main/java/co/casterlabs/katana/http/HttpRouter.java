@@ -18,6 +18,8 @@ import co.casterlabs.katana.Reason;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.config.ServerConfiguration;
 import co.casterlabs.katana.http.servlets.HttpServlet;
+import co.casterlabs.rakurai.DataSize;
+import co.casterlabs.rakurai.io.IOUtil;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
@@ -48,6 +50,11 @@ public class HttpRouter implements HttpListener {
     private HttpServer server;
 
     static {
+        // Buffers need to be small, since this server will be "outward" facing.
+        // Unless the response is chunked, this value will effectively be
+        // the maximum buffer size.
+        IOUtil.DEFAULT_BUFFER_SIZE = (int) DataSize.MEGABYTE.toBytes(10);
+
         try {
             Field field = NanoHTTPD.class.getDeclaredField("LOG");
 
@@ -69,20 +76,7 @@ public class HttpRouter implements HttpListener {
         this.katana = katana;
         this.config = config;
 
-        HttpServerBuilder builder = null;
-
-        switch (this.katana.getLauncher().getImplementation()) {
-            case NANO:
-                this.logger.info("Using Nano as the server implementation.");
-                builder = HttpServerBuilder.getNanoBuilder();
-                break;
-
-            case UNDERTOW:
-                this.logger.info("Using Undertow as the server implementation.");
-                builder = HttpServerBuilder.getUndertowBuilder();
-                break;
-
-        }
+        HttpServerBuilder builder = HttpServerBuilder.get(this.katana.getLauncher().getImplementation());
 
         builder.setPort(config.getPort());
         builder.setHttp2Enabled(true);
@@ -102,7 +96,7 @@ public class HttpRouter implements HttpListener {
                     rakurai.setDHSize(ssl.dh_size);
                     rakurai.setEnabledCipherSuites(ssl.enabled_cipher_suites);
                     rakurai.setEnabledTlsVersions(ssl.tls);
-                    // rakurai.setPort(ssl.port);
+                    rakurai.setPort(ssl.port);
 
                     this.forceHttps = ssl.force;
 

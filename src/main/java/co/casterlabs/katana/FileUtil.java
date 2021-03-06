@@ -24,7 +24,7 @@ public class FileUtil {
         try {
             String etag = Integer.toHexString((file.getAbsolutePath() + file.lastModified() + "" + file.length()).hashCode());
             String mime = MimeTypes.getMimeForFile(file);
-            String range = session.getHeaders().get("range");
+            String range = session.getHeader("range");
             long startFrom = 0;
             long endAt = -1;
 
@@ -128,8 +128,14 @@ public class FileUtil {
 
     public static HttpResponse serveMiki(HttpSession session, File file, HttpStatus status) {
         try {
+            Map<String, String> headers = new HashMap<>();
+
+            for (Map.Entry<String, List<String>> entry : session.getHeaders().entrySet()) {
+                headers.put(entry.getKey(), entry.getValue().get(0));
+            }
+
             MikiFileAdapter miki = MikiFileAdapter.readFile(file);
-            WebRequest request = new WebRequest(session.getQueryParameters(), session.getHeaders(), session.getHost(), session.getMethod().name(), session.getUri(), session.getRequestBody(), session.getPort());
+            WebRequest request = new WebRequest(session.getQueryParameters(), headers, session.getHost(), session.getMethod().name(), session.getUri(), session.getRequestBody(), session.getPort());
 
             WebResponse response = miki.formatAsWeb(getMikiGlobals(session, status), request);
 

@@ -1,7 +1,8 @@
 package co.casterlabs.katana.http.servlets;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
+import java.util.Map.Entry;
 
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.SerializedName;
@@ -72,11 +73,11 @@ public class ProxyServlet extends HttpServlet {
                         builder.method(session.getMethod().name(), RequestBody.create(session.getRequestBodyBytes()));
                     }
 
-                    for (Map.Entry<String, String> header : session.getHeaders().entrySet()) {
+                    for (Entry<String, List<String>> header : session.getHeaders().entrySet()) {
                         String key = header.getKey();
 
-                        if (!key.equalsIgnoreCase("remote-addr") && !key.equalsIgnoreCase("http-client-ip") && !key.equalsIgnoreCase("host")) {
-                            builder.addHeader(key, header.getValue());
+                        if (!key.equals("remote-addr") && !key.equals("http-client-ip") && !key.equals("host")) {
+                            builder.addHeader(key, header.getValue().get(0));
                         }
                     }
 
