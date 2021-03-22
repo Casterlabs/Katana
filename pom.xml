@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>co.casterlabs</groupId>
     <artifactId>Katana</artifactId>
-    <version>1.14.0</version>
+    <version>1.14.1</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -83,7 +83,7 @@
         <dependency>
             <groupId>com.github.casterlabs</groupId>
             <artifactId>Rakurai</artifactId>
-            <version>034cb62</version>
+            <version>6df3bef</version> <!-- 1.0.1 -->
             <scope>compile</scope>
         </dependency>
 

@@ -63,7 +63,7 @@ public class FileUtil {
                     response.putHeader("Content-Range", "bytes " + startFrom + "-" + endAt + "/" + fileLen);
                 }
             } else {
-                if ((range != null) && etag.equals(session.getHeaders().get("if-none-match"))) {
+                if ((range != null) && etag.equals(session.getHeader("if-none-match"))) {
                     response = HttpResponse.newFixedLengthResponse(StandardHttpStatus.RANGE_NOT_SATISFIABLE, new byte[0]);
 
                     response.putHeader("Content-Range", "bytes 0-0/" + fileLen);
