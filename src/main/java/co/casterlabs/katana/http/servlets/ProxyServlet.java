@@ -10,11 +10,13 @@ import com.google.gson.annotations.SerializedName;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.http.HttpRouter;
+import co.casterlabs.rakurai.io.http.DropConnectionException;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
 import kotlin.Pair;
+import lombok.AllArgsConstructor;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -66,30 +68,33 @@ public class ProxyServlet extends HttpServlet {
                     url += session.getQueryString();
                 }
 
-                try {
-                    Request.Builder builder = new Request.Builder().url(url);
+                Request.Builder builder = new Request.Builder().url(url);
 
-                    if (session.hasBody()) {
+                if (session.hasBody()) {
+                    try {
                         builder.method(session.getMethod().name(), RequestBody.create(session.getRequestBodyBytes()));
+                    } catch (IOException e) {
+                        throw new DropConnectionException();
                     }
+                }
 
-                    for (Entry<String, List<String>> header : session.getHeaders().entrySet()) {
-                        String key = header.getKey();
+                for (Entry<String, List<String>> header : session.getHeaders().entrySet()) {
+                    String key = header.getKey();
 
-                        if (!key.equals("remote-addr") && !key.equals("http-client-ip") && !key.equals("host")) {
-                            builder.addHeader(key, header.getValue().get(0));
-                        }
+                    if (!key.equals("remote-addr") && !key.equals("http-client-ip") && !key.equals("host")) {
+                        builder.addHeader(key, header.getValue().get(0));
                     }
+                }
 
-                    if (this.config.forwardIp) {
-                        builder.addHeader("x-remote-ip", session.getRemoteIpAddress());
-                        builder.addHeader("x-katana-ip", session.getRemoteIpAddress());
-                    }
+                if (this.config.forwardIp) {
+                    builder.addHeader("x-remote-ip", session.getRemoteIpAddress());
+                    builder.addHeader("x-katana-ip", session.getRemoteIpAddress());
+                }
 
-                    Request request = builder.build();
-                    Response response = client.newCall(request).execute();
+                Request request = builder.build();
 
-                    HttpStatus status = StandardHttpStatus.lookup(response.code());
+                try (Response response = client.newCall(request).execute()) {
+                    HttpStatus status = new HttpStatusAdapter(response.code());
                     long responseLen = response.body().contentLength();
 
                     //@formatter:off
@@ -110,13 +115,33 @@ public class ProxyServlet extends HttpServlet {
 
                     return result;
                 } catch (IOException e) {
-                    throw new RuntimeException(); // Kill the connection.
+                    throw new DropConnectionException();
                 }
             } else {
                 return null;
             }
         } else {
             return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Proxy url not set.", router.getConfig());
+        }
+    }
+
+    @AllArgsConstructor
+    private static class HttpStatusAdapter implements HttpStatus {
+        private int code;
+
+        @Override
+        public String getStatusString() {
+            return String.valueOf(this.code);
+        }
+
+        @Override
+        public String getDescription() {
+            return "";
+        }
+
+        @Override
+        public int getStatusCode() {
+            return this.code;
         }
     }
 
