@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.collections4.MultiValuedMap;
@@ -45,6 +46,18 @@ public class Util {
         return ret;
     }
 
+    public static <T> Collection<T> regexGet(Map<String, T> map, String in) {
+        Collection<T> ret = new ArrayList<>();
+
+        for (Entry<String, T> entry : map.entrySet()) {
+            if (in.matches(entry.getKey())) {
+                ret.add(entry.getValue());
+            }
+        }
+
+        return ret;
+    }
+
     public static boolean regexContains(Collection<String> list, String in) {
         for (String item : list) {
             if (in.matches(item)) {
@@ -57,16 +70,21 @@ public class Util {
 
     public static HttpResponse errorResponse(HttpSession session, HttpStatus status, String description, @Nullable ServerConfiguration config) {
         if (config != null) {
-            String potential = config.getErrorResponses().get(String.valueOf(status.getStatusCode()));
+            Collection<Map<String, String>> matchedErrors = regexGet(config.getErrorResponses(), session.getHost());
 
-            if (potential != null) {
-                File file = new File(potential);
+            for (Map<String, String> hostErrors : matchedErrors) {
+                Collection<String> potential = regexGet(hostErrors, String.valueOf(status.getStatusCode()));
 
-                if (file.exists()) {
-                    if (FileUtil.isMiki(file)) {
-                        return FileUtil.serveMiki(session, file, status);
-                    } else {
-                        return FileUtil.serveFile(file, session);
+                // This is dirty af.
+                for (String fileLocation : potential) {
+                    File file = new File(fileLocation);
+
+                    if (file.exists()) {
+                        if (FileUtil.isMiki(file)) {
+                            return FileUtil.serveMiki(session, file, status);
+                        } else {
+                            return FileUtil.serveFile(file, session);
+                        }
                     }
                 }
             }

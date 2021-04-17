@@ -24,14 +24,14 @@ public class ServerConfiguration {
     private List<HttpServlet> servlets = new ArrayList<>();
     private String name = "www";
     private int port = 80;
-    private Map<String, String> errorResponses = new HashMap<>();
+    private Map<String, Map<String, String>> errorResponses = new HashMap<>();
     private boolean debugMode;
 
     public ServerConfiguration(JsonObject json, Katana katana) throws IllegalArgumentException {
         this.SSL = Katana.GSON.fromJson(json.get("ssl"), SSLConfiguration.class);
         this.name = ConfigUtil.getStringValue("name", json);
         this.port = ConfigUtil.getIntValue("port", json);
-        this.errorResponses = Katana.GSON.fromJson(json.get("error_responses"), new TypeToken<Map<String, String>>() {
+        this.errorResponses = Katana.GSON.fromJson(json.get("error_responses"), new TypeToken<Map<String, Map<String, String>>>() {
         }.getType());
 
         if (json.has("debug_mode")) {
