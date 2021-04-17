@@ -92,8 +92,11 @@ public class ProxyServlet extends HttpServlet {
                 }
 
                 Request request = builder.build();
+                Response response = null;
 
-                try (Response response = client.newCall(request).execute()) {
+                try {
+                    response = client.newCall(request).execute();
+
                     HttpStatus status = new HttpStatusAdapter(response.code());
                     long responseLen = response.body().contentLength();
 
@@ -114,7 +117,13 @@ public class ProxyServlet extends HttpServlet {
                     result.setMimeType(response.header("Content-Type"));
 
                     return result;
-                } catch (IOException e) {
+                } catch (Exception e) {
+                    // Rakurai will automatically close the stream if a write error or
+                    // end of stream is reached, this is to catch inner errors.
+                    if (response != null) {
+                        response.close();
+                    }
+
                     throw new DropConnectionException();
                 }
             } else {
