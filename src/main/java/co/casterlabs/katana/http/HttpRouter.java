@@ -2,12 +2,9 @@ package co.casterlabs.katana.http;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -29,11 +26,12 @@ import co.casterlabs.rakurai.io.http.server.HttpServerBuilder;
 import co.casterlabs.rakurai.io.http.server.SSLConfiguration;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
-import fi.iki.elonen.NanoHTTPD;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
+import xyz.e3ndr.fastloggingframework.logging.LogLevel;
+import xyz.e3ndr.reflectionlib.ReflectionLib;
 
 @Getter
 public class HttpRouter implements HttpListener {
@@ -49,41 +47,35 @@ public class HttpRouter implements HttpListener {
     private HttpServer serverSecure;
     private HttpServer server;
 
+    private List<FastLogger> serverLoggers = new ArrayList<>();
+
     static {
         // Buffers need to be small, since this server will be "outward" facing.
         // Unless the response is chunked, this value will effectively be
         // the maximum buffer size.
         IOUtil.DEFAULT_BUFFER_SIZE = (int) DataSize.MEGABYTE.toBytes(10);
+    }
 
-        try {
-            Field field = NanoHTTPD.class.getDeclaredField("LOG");
-
-            field.setAccessible(true);
-
-            Logger log = (Logger) field.get(null);
-
-            log.setLevel(Level.OFF); // Shush
-        } catch (IllegalArgumentException | IllegalAccessException | NoSuchFieldException | SecurityException e) {
-            e.printStackTrace();
-        }
+    @SneakyThrows
+    private static FastLogger getLoggerFromServer(HttpServer server) {
+        return ReflectionLib.getValue(server, "logger");
     }
 
     public HttpRouter(ServerConfiguration config, Katana katana) throws IOException {
         this.logger = new FastLogger(String.format("HttpServer (%s)", config.getName()));
-
-        this.loadConfig(config);
-
         this.katana = katana;
         this.config = config;
 
         HttpServerBuilder builder = HttpServerBuilder.get(this.katana.getLauncher().getImplementation());
 
-        builder.setPort(config.getPort());
+        builder.setPort(this.config.getPort());
         builder.setHttp2Enabled(true);
 
         this.server = builder.build(this);
 
-        ServerConfiguration.SSLConfiguration ssl = config.getSSL();
+        this.serverLoggers.add(getLoggerFromServer(this.server));
+
+        ServerConfiguration.SSLConfiguration ssl = this.config.getSSL();
         if ((ssl != null) && ssl.enabled) {
             try {
                 File certificate = new File(ssl.keystore);
@@ -102,21 +94,35 @@ public class HttpRouter implements HttpListener {
 
                     this.forceHttps = ssl.force;
                     this.serverSecure = builder.buildSecure(this);
+
+                    this.serverLoggers.add(getLoggerFromServer(this.serverSecure));
                 }
             } catch (Exception e) {
                 this.failReasons.add(new Reason("Server cannot start due to an exception.", e));
             }
         }
+
+        this.loadConfig(this.config);
     }
 
     public void loadConfig(ServerConfiguration config) {
+        this.config = config;
+
         this.hostnames.clear();
 
-        for (HttpServlet servlet : config.getServlets()) {
+        for (HttpServlet servlet : this.config.getServlets()) {
             for (String host : servlet.getHosts()) {
                 String regex = host.toLowerCase().replace(".", "\\.").replace("*", ".*");
 
                 this.hostnames.put(regex, servlet);
+            }
+        }
+
+        for (FastLogger serverLogger : this.serverLoggers) {
+            if (this.config.isDebugMode()) {
+                serverLogger.setCurrentLevel(LogLevel.DEBUG);
+            } else {
+                serverLogger.setCurrentLevel(LogLevel.SEVERE);
             }
         }
     }

@@ -25,6 +25,7 @@ public class ServerConfiguration {
     private String name = "www";
     private int port = 80;
     private Map<String, String> errorResponses = new HashMap<>();
+    private boolean debugMode;
 
     public ServerConfiguration(JsonObject json, Katana katana) throws IllegalArgumentException {
         this.SSL = Katana.GSON.fromJson(json.get("ssl"), SSLConfiguration.class);
@@ -32,6 +33,10 @@ public class ServerConfiguration {
         this.port = ConfigUtil.getIntValue("port", json);
         this.errorResponses = Katana.GSON.fromJson(json.get("error_responses"), new TypeToken<Map<String, String>>() {
         }.getType());
+
+        if (json.has("debug_mode")) {
+            this.debugMode = json.get("debug_mode").getAsBoolean();
+        }
 
         JsonElement array = json.get("hosts");
         if ((array != null) && array.isJsonArray()) {
