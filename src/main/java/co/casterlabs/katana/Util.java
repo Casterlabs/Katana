@@ -69,27 +69,6 @@ public class Util {
     }
 
     public static HttpResponse errorResponse(HttpSession session, HttpStatus status, String description, @Nullable ServerConfiguration config) {
-        if (config != null) {
-            Collection<Map<String, String>> matchedErrors = regexGet(config.getErrorResponses(), session.getHost());
-
-            for (Map<String, String> hostErrors : matchedErrors) {
-                Collection<String> potential = regexGet(hostErrors, String.valueOf(status.getStatusCode()));
-
-                // This is dirty af.
-                for (String fileLocation : potential) {
-                    File file = new File(fileLocation);
-
-                    if (file.exists()) {
-                        if (FileUtil.isMiki(file)) {
-                            return FileUtil.serveMiki(session, file, status);
-                        } else {
-                            return FileUtil.serveFile(file, session);
-                        }
-                    }
-                }
-            }
-        }
-
         // @formatter:off
         return HttpResponse.newFixedLengthResponse(status, Katana.ERROR_HTML
                 .replace("$RESPONSECODE", String.valueOf(status.getStatusCode()))

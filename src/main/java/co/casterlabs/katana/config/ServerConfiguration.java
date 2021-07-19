@@ -2,13 +2,10 @@ package co.casterlabs.katana.config;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.http.servlets.HttpServlet;
@@ -24,15 +21,12 @@ public class ServerConfiguration {
     private List<HttpServlet> servlets = new ArrayList<>();
     private String name = "www";
     private int port = 80;
-    private Map<String, Map<String, String>> errorResponses = new HashMap<>();
     private boolean debugMode;
 
     public ServerConfiguration(JsonObject json, Katana katana) throws IllegalArgumentException {
         this.SSL = Katana.GSON.fromJson(json.get("ssl"), SSLConfiguration.class);
         this.name = ConfigUtil.getStringValue("name", json);
         this.port = ConfigUtil.getIntValue("port", json);
-        this.errorResponses = Katana.GSON.fromJson(json.get("error_responses"), new TypeToken<Map<String, Map<String, String>>>() {
-        }.getType());
 
         if (json.has("debug_mode")) {
             this.debugMode = json.get("debug_mode").getAsBoolean();
