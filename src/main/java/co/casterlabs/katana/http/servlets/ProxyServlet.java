@@ -70,13 +70,16 @@ public class ProxyServlet extends HttpServlet {
 
                 Request.Builder builder = new Request.Builder().url(url);
 
-                if (session.hasBody()) {
-                    try {
-                        builder.method(session.getMethod().name(), RequestBody.create(session.getRequestBodyBytes()));
-                    } catch (IOException e) {
-                        throw new DropConnectionException();
+                try {
+                    // If it throws then we have no body.
+                    if (session.getRequestBodyBytes() != null) {
+                        try {
+                            builder.method(session.getMethod().name().toUpperCase(), RequestBody.create(session.getRequestBodyBytes()));
+                        } catch (IOException e) {
+                            throw new DropConnectionException();
+                        }
                     }
-                }
+                } catch (IOException e) {}
 
                 for (Entry<String, List<String>> header : session.getHeaders().entrySet()) {
                     String key = header.getKey();
@@ -92,10 +95,8 @@ public class ProxyServlet extends HttpServlet {
                 }
 
                 Request request = builder.build();
-                Response response = null;
 
-                try {
-                    response = client.newCall(request).execute();
+                try (Response response = client.newCall(request).execute()) {
 
                     HttpStatus status = new HttpStatusAdapter(response.code());
                     long responseLen = response.body().contentLength();
@@ -103,7 +104,7 @@ public class ProxyServlet extends HttpServlet {
                     //@formatter:off
                     HttpResponse result = (responseLen == -1) ?
                             HttpResponse.newChunkedResponse(status, response.body().byteStream()) : 
-                            HttpResponse.newFixedLengthResponse(status, response.body().byteStream(), responseLen);
+                            HttpResponse.newFixedLengthResponse(status, response.body().bytes()); // Ugh.
                     //@formatter:on
 
                     for (Pair<? extends String, ? extends String> header : response.headers()) {
@@ -114,16 +115,14 @@ public class ProxyServlet extends HttpServlet {
                         }
                     }
 
-                    result.setMimeType(response.header("Content-Type"));
+                    result.setMimeType(response.header("Content-Type", "application/octet-stream"));
 
                     return result;
                 } catch (Exception e) {
-                    // Rakurai will automatically close the stream if a write error or
-                    // end of stream is reached, this is to catch inner errors.
-                    if (response != null) {
-                        response.close();
-                    }
+                    e.printStackTrace();
 
+                    // Rakurai will automatically close the stream if a write error or
+                    // end of stream is reached.
                     throw new DropConnectionException();
                 }
             } else {

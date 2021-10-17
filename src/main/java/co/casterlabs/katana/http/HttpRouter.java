@@ -17,6 +17,7 @@ import co.casterlabs.katana.config.ServerConfiguration;
 import co.casterlabs.katana.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.DataSize;
 import co.casterlabs.rakurai.io.IOUtil;
+import co.casterlabs.rakurai.io.http.HttpMethod;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
@@ -166,31 +167,50 @@ public class HttpRouter implements HttpListener {
                 return Util.errorResponse(session, StandardHttpStatus.FORBIDDEN, "Insecure connections are not allowed.", this.config);
             }
         } else {
-            Collection<HttpServlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
-            HttpResponse response = this.iterateConfigs(session, servlets);
+            if (session.getMethod() == HttpMethod.OPTIONS) {
+                HttpResponse response = HttpResponse.newFixedLengthResponse(StandardHttpStatus.OK);
 
-            // Allow CORS
-            String refererHeader = session.getHeader("Referer");
-            if (response != null) {
                 response.putHeader("server", Katana.SERVER_DECLARATION);
 
+                String refererHeader = session.getHeader("Referer");
                 if (refererHeader != null) {
                     String[] split = refererHeader.split("://");
                     String protocol = split[0];
                     String referer = split[1].split("/")[0]; // Strip protocol and uri
 
-                    for (HttpServlet servlet : servlets) {
-                        if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
-                            response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
-                            this.logger.debug("Set CORS header for %s", referer);
-                            break;
-                        }
-                    }
+                    response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
+                    response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
+                    this.logger.debug("Set CORS headers for %s", referer);
                 }
 
                 return response;
             } else {
-                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "No servlet available.", this.config);
+                Collection<HttpServlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
+                HttpResponse response = this.iterateConfigs(session, servlets);
+
+                // Allow CORS
+                String refererHeader = session.getHeader("Referer");
+                if (response != null) {
+                    response.putHeader("server", Katana.SERVER_DECLARATION);
+
+                    if (refererHeader != null) {
+                        String[] split = refererHeader.split("://");
+                        String protocol = split[0];
+                        String referer = split[1].split("/")[0]; // Strip protocol and uri
+
+                        for (HttpServlet servlet : servlets) {
+                            if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
+                                response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
+                                this.logger.debug("Set CORS header for %s", referer);
+                                break;
+                            }
+                        }
+                    }
+
+                    return response;
+                } else {
+                    return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "No servlet available.", this.config);
+                }
             }
         }
     }
