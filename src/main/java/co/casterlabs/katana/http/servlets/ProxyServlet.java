@@ -1,6 +1,8 @@
 package co.casterlabs.katana.http.servlets;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -55,6 +57,7 @@ public class ProxyServlet extends HttpServlet {
 
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         if (this.config.proxyUrl != null) {
@@ -64,7 +67,13 @@ public class ProxyServlet extends HttpServlet {
                 if (this.config.proxyPath == null) {
                     url += session.getUri();
                 } else if (this.config.includePath) {
-                    url += session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
+                    String part = session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
+
+                    part = URLDecoder.decode(part); // Decode 1 step
+                    part = URLEncoder.encode(part);
+
+                    url += part;
+
                     url += session.getQueryString();
                 }
 
