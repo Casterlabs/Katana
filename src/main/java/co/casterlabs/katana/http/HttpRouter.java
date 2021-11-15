@@ -201,6 +201,7 @@ public class HttpRouter implements HttpListener {
                         for (HttpServlet servlet : servlets) {
                             if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
                                 response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
+                                response.putHeader("Access-Control-Allow-Method", session.getMethod().name());
                                 this.logger.debug("Set CORS header for %s", referer);
                                 break;
                             }
