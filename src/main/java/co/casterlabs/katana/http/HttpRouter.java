@@ -36,6 +36,8 @@ import xyz.e3ndr.reflectionlib.ReflectionLib;
 
 @Getter
 public class HttpRouter implements HttpListener {
+    private static String ALLOWED_METHODS;
+
     private MultiValuedMap<String, HttpServlet> hostnames = new ArrayListValuedHashMap<>();
     private List<Reason> failReasons = new ArrayList<>();
     private boolean keepErrorStatus = true;
@@ -55,6 +57,13 @@ public class HttpRouter implements HttpListener {
         // Unless the response is chunked, this value will effectively be
         // the maximum buffer size.
         IOUtil.DEFAULT_BUFFER_SIZE = (int) DataSize.MEGABYTE.toBytes(10);
+
+        List<String> methods = new ArrayList<>();
+        for (HttpMethod method : HttpMethod.values()) {
+            methods.add(method.name());
+        }
+
+        ALLOWED_METHODS = String.join(", ", methods);
     }
 
     @SneakyThrows
@@ -179,6 +188,7 @@ public class HttpRouter implements HttpListener {
                     String referer = split[1].split("/")[0]; // Strip protocol and uri
 
                     response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
+                    response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
                     response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
                     this.logger.debug("Set CORS headers for %s", referer);
                 }
@@ -201,7 +211,8 @@ public class HttpRouter implements HttpListener {
                         for (HttpServlet servlet : servlets) {
                             if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
                                 response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
-                                response.putHeader("Access-Control-Allow-Method", session.getMethod().name());
+                                response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
+                                response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
                                 this.logger.debug("Set CORS header for %s", referer);
                                 break;
                             }
