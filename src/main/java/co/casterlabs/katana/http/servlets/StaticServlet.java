@@ -1,6 +1,7 @@
 package co.casterlabs.katana.http.servlets;
 
 import java.io.File;
+import java.net.URLDecoder;
 import java.util.Arrays;
 import java.util.List;
 
@@ -14,6 +15,7 @@ import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
+import lombok.NonNull;
 import lombok.SneakyThrows;
 
 public class StaticServlet extends HttpServlet {
@@ -45,8 +47,10 @@ public class StaticServlet extends HttpServlet {
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         if (this.config.directory != null) {
+            String uri = decodeURIComponent(session.getUri());
             File directory = new File(this.config.directory);
-            File file = FileUtil.getFile(directory, session.getUri().replace('\\', '/'), this.config.requireFileExtensions, defaultFiles);
+
+            File file = FileUtil.getFile(directory, uri, this.config.requireFileExtensions, defaultFiles);
 
             try {
                 if (file.getCanonicalPath().startsWith(directory.getCanonicalPath()) && file.exists() && file.isFile()) {
@@ -64,6 +68,11 @@ public class StaticServlet extends HttpServlet {
         } else {
             return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Serve directory not set.", router.getConfig());
         }
+    }
+
+    @SneakyThrows
+    public static String decodeURIComponent(@NonNull String s) {
+        return URLDecoder.decode(s, "UTF-8");
     }
 
 }
