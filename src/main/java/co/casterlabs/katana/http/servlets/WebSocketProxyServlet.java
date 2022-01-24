@@ -4,7 +4,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
-import java.util.Map;
+import java.util.List;
+import java.util.Map.Entry;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -65,8 +66,8 @@ public class WebSocketProxyServlet extends HttpServlet {
                         public void onOpen(Websocket websocket) {
                             this.remote = new RemoteWebSocketConnection(uri, websocket);
 
-                            for (Map.Entry<String, String> entry : session.getHeaders().entrySet()) {
-                                this.remote.addHeader(entry.getKey(), entry.getValue());
+                            for (Entry<String, List<String>> entry : session.getHeaders().entrySet()) {
+                                this.remote.addHeader(entry.getKey(), entry.getValue().get(0));
                             }
 
                             try {
