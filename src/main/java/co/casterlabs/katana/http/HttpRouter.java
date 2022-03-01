@@ -181,9 +181,9 @@ public class HttpRouter implements HttpListener {
 
                 response.putHeader("server", Katana.SERVER_DECLARATION);
 
-                String refererHeader = session.getHeader("Referer");
-                if (refererHeader != null) {
-                    String[] split = refererHeader.split("://");
+                String originHeader = session.getHeader("Origin");
+                if (originHeader != null) {
+                    String[] split = originHeader.split("://");
                     String protocol = split[0];
                     String referer = split[1].split("/")[0]; // Strip protocol and uri
 
@@ -199,12 +199,12 @@ public class HttpRouter implements HttpListener {
                 HttpResponse response = this.iterateConfigs(session, servlets);
 
                 // Allow CORS
-                String refererHeader = session.getHeader("Referer");
+                String originHeader = session.getHeader("Origin");
                 if (response != null) {
                     response.putHeader("server", Katana.SERVER_DECLARATION);
 
-                    if (refererHeader != null) {
-                        String[] split = refererHeader.split("://");
+                    if (originHeader != null) {
+                        String[] split = originHeader.split("://");
                         String protocol = split[0];
                         String referer = split[1].split("/")[0]; // Strip protocol and uri
 
