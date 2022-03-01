@@ -184,13 +184,16 @@ public class HttpRouter implements HttpListener {
                 String originHeader = session.getHeader("Origin");
                 if (originHeader != null) {
                     String[] split = originHeader.split("://");
-                    String protocol = split[0];
-                    String referer = split[1].split("/")[0]; // Strip protocol and uri
 
-                    response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
-                    response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
-                    response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
-                    this.logger.debug("Set CORS headers for %s", referer);
+                    if (split.length == 2) {
+                        String protocol = split[0];
+                        String referer = split[1].split("/")[0]; // Strip protocol and uri
+
+                        response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
+                        response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
+                        response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
+                        this.logger.debug("Set CORS headers for %s", referer);
+                    }
                 }
 
                 return response;
@@ -205,16 +208,19 @@ public class HttpRouter implements HttpListener {
 
                     if (originHeader != null) {
                         String[] split = originHeader.split("://");
-                        String protocol = split[0];
-                        String referer = split[1].split("/")[0]; // Strip protocol and uri
 
-                        for (HttpServlet servlet : servlets) {
-                            if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
-                                response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
-                                response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
-                                response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
-                                this.logger.debug("Set CORS header for %s", referer);
-                                break;
+                        if (split.length == 2) {
+                            String protocol = split[0];
+                            String referer = split[1].split("/")[0]; // Strip protocol and uri
+
+                            for (HttpServlet servlet : servlets) {
+                                if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
+                                    response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
+                                    response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
+                                    response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
+                                    this.logger.debug("Set CORS header for %s", referer);
+                                    break;
+                                }
                             }
                         }
                     }
