@@ -45,7 +45,7 @@ public class ProxyServlet extends HttpServlet {
         public String proxyUrl;
 
         @SerializedName("proxy_path")
-        public String proxyPath = "*";
+        public String proxyPath;
 
         @SerializedName("include_path")
         public boolean includePath;
@@ -64,7 +64,10 @@ public class ProxyServlet extends HttpServlet {
                 if (this.config.proxyPath == null) {
                     url += session.getUri();
                 } else if (this.config.includePath) {
-                    url += session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
+                    if (this.config.proxyPath != null) {
+                        url += session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
+                    }
+
                     url += session.getQueryString();
                 }
 
