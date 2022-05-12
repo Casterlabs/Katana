@@ -1,5 +1,6 @@
 package co.casterlabs.katana.config;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -21,12 +22,20 @@ public class ServerConfiguration {
     private List<HttpServlet> servlets = new ArrayList<>();
     private String name = "www";
     private int port = 80;
+    private boolean isBehindProxy;
     private boolean debugMode;
+    private File logsDir;
 
     public ServerConfiguration(JsonObject json, Katana katana) throws IllegalArgumentException {
         this.SSL = Katana.GSON.fromJson(json.get("ssl"), SSLConfiguration.class);
         this.name = ConfigUtil.getStringValue("name", json);
         this.port = ConfigUtil.getIntValue("port", json);
+        this.isBehindProxy = ConfigUtil.getBooleanValue("is_behind_proxy", json);
+
+        if (json.has("logs_dir")) {
+            this.logsDir = new File(ConfigUtil.getStringValue("logs_dir", json));
+            this.logsDir.mkdirs();
+        }
 
         if (json.has("debug_mode")) {
             this.debugMode = json.get("debug_mode").getAsBoolean();

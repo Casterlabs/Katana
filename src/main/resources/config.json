@@ -2,6 +2,9 @@
 	{
 		"name": "www",
 		"port": 80,
+		"debug_mode": true,
+		"is_behind_proxy": false,
+		"logs_dir": "./logs",
 		"ssl": {
 			"enabled": false,
 			"tls": [

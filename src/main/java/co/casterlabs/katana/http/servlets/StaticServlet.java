@@ -37,7 +37,7 @@ public class StaticServlet extends HttpServlet {
         public boolean requireFileExtensions;
 
         @SerializedName("use_miki")
-        public boolean useMiki = true;
+        public boolean useMiki = false;
 
         public String directory;
 

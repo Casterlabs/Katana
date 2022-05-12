@@ -22,6 +22,7 @@ import xyz.e3ndr.fastloggingframework.FastLoggingFramework;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
+@Getter
 @Command(name = "start", mixinStandardHelpOptions = true, version = "Katana v" + Katana.VERSION, description = "Starts the Katana server")
 public class Launcher implements Runnable {
 
@@ -52,7 +53,7 @@ public class Launcher implements Runnable {
     @Override
     public void run() {
         if (this.debug) {
-            FastLoggingFramework.setDefaultLevel(LogLevel.DEBUG);
+            FastLoggingFramework.setDefaultLevel(LogLevel.ALL);
             new FastLogger().debug("Debug mode enabled.");
         }
 

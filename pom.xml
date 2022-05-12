@@ -83,7 +83,7 @@
         <dependency>
             <groupId>com.github.casterlabs.rakurai</groupId>
             <artifactId>Http-Server</artifactId>
-            <version>1.12.1</version>
+            <version>cc83c2c</version>
             <scope>compile</scope>
         </dependency>
         <dependency>

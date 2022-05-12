@@ -16,7 +16,7 @@ import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
 import co.casterlabs.rakurai.io.http.MimeTypes;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
-import xyz.e3ndr.fastloggingframework.logging.LoggingUtil;
+import xyz.e3ndr.fastloggingframework.logging.StringUtil;
 
 public class FileUtil {
 
@@ -153,7 +153,7 @@ public class FileUtil {
 
             return result;
         } catch (Exception e) {
-            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, LoggingUtil.getExceptionStack(e), null);
+            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, StringUtil.getExceptionStack(e), null);
         }
     }
 

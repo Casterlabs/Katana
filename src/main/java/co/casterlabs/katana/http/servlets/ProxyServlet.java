@@ -93,8 +93,9 @@ public class ProxyServlet extends HttpServlet {
                 }
 
                 if (this.config.forwardIp) {
-                    builder.addHeader("x-remote-ip", session.getRemoteIpAddress());
-                    builder.addHeader("x-katana-ip", session.getRemoteIpAddress());
+                    builder.addHeader("X-Remote-IP", session.getRemoteIpAddress()); // Deprecated
+                    builder.addHeader("X-Katana-IP", session.getRemoteIpAddress()); // Deprecated
+                    builder.addHeader("X-Forwarded-For", String.join(", ", session.getRequestHops()));
                 }
 
                 Request request = builder.build();
