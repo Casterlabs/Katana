@@ -1,9 +1,20 @@
-www*
-.settings*
-target*
+# IntelliJ
+*.iml
+.idea/
+
+# Eclipse
+.settings/
 .project
 .classpath
-config.json
+.metadata
+
+# VSCode
+.vscode/
+.apt_generated/
+
+# Common
+target/
+www/
+logs/
 config.json
 ssl.jks
-src/main/java/co/casterlabs/katana/Test.java
