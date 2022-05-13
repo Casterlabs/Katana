@@ -47,6 +47,7 @@ public class Launcher implements Runnable {
     private HttpServerImplementation implementation = HttpServerImplementation.UNDERTOW;
 
     public static void main(String[] args) {
+        ClassLoader.getSystemClassLoader().setDefaultAssertionStatus(true); // Enable assertions
         new CommandLine(new Launcher()).execute(args);
     }
 
