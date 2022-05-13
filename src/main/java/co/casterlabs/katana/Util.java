@@ -12,19 +12,19 @@ import java.util.Map.Entry;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.jetbrains.annotations.Nullable;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-
 import co.casterlabs.katana.config.ServerConfiguration;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
+import co.casterlabs.rakurai.json.Rson;
+import co.casterlabs.rakurai.json.element.JsonArray;
+import co.casterlabs.rakurai.json.element.JsonElement;
 
 public class Util {
 
     public static <T extends Collection<String>> T fillFromJson(JsonArray array, T collection) {
         if (array.isJsonArray()) {
-            for (JsonElement element : array.getAsJsonArray()) {
+            for (JsonElement element : array.getAsArray()) {
                 if (!element.isJsonNull()) {
                     collection.add(element.getAsString());
                 }
@@ -89,7 +89,7 @@ public class Util {
     public static <T> T readFileAsJson(File file, Class<T> clazz) throws Exception {
         byte[] bytes = Files.readAllBytes(file.toPath());
 
-        return Katana.GSON.fromJson(new String(bytes, StandardCharsets.UTF_8), clazz);
+        return Rson.DEFAULT.fromJson(new String(bytes, StandardCharsets.UTF_8), clazz);
     }
 
 }

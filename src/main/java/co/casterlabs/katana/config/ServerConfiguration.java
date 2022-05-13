@@ -5,77 +5,94 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.io.http.TLSVersion;
-import lombok.AccessLevel;
-import lombok.Data;
-import lombok.Setter;
+import co.casterlabs.rakurai.json.annotating.JsonClass;
+import co.casterlabs.rakurai.json.annotating.JsonDeserializationMethod;
+import co.casterlabs.rakurai.json.annotating.JsonField;
+import co.casterlabs.rakurai.json.element.JsonElement;
+import co.casterlabs.rakurai.json.element.JsonObject;
+import co.casterlabs.rakurai.json.serialization.JsonParseException;
+import co.casterlabs.rakurai.json.validation.JsonValidationException;
+import lombok.Getter;
 
-@Data
-@Setter(AccessLevel.NONE)
+@Getter
+@JsonClass(exposeAll = true)
 public class ServerConfiguration {
+    @JsonField("ssl")
     private SSLConfiguration SSL = new SSLConfiguration();
+
     private List<HttpServlet> servlets = new ArrayList<>();
+
     private String name = "www";
+
     private int port = 80;
+
+    @JsonField("is_behind_proxy")
     private boolean isBehindProxy;
+
+    @JsonField("debug_mode")
     private boolean debugMode;
+
+    @JsonField("logs_dir")
     private File logsDir;
 
-    public ServerConfiguration(JsonObject json, Katana katana) throws IllegalArgumentException {
-        this.SSL = Katana.GSON.fromJson(json.get("ssl"), SSLConfiguration.class);
-        this.name = ConfigUtil.getStringValue("name", json);
-        this.port = ConfigUtil.getIntValue("port", json);
-        this.isBehindProxy = ConfigUtil.getBooleanValue("is_behind_proxy", json);
+    @JsonDeserializationMethod("hosts")
+    private void $deserialize_hosts(JsonElement hosts) throws JsonValidationException, JsonParseException {
+        for (JsonElement e : hosts.getAsArray()) {
+            JsonObject config = e.getAsObject();
+            String type = config.getString("type");
 
-        if (json.has("logs_dir")) {
-            this.logsDir = new File(ConfigUtil.getStringValue("logs_dir", json));
-            this.logsDir.mkdirs();
-        }
+            HttpServlet servlet = Katana.getInstance().getServlet(type);
 
-        if (json.has("debug_mode")) {
-            this.debugMode = json.get("debug_mode").getAsBoolean();
-        }
-
-        JsonElement array = json.get("hosts");
-        if ((array != null) && array.isJsonArray()) {
-            for (JsonElement e : array.getAsJsonArray()) {
-                JsonObject config = e.getAsJsonObject();
-                String type = config.get("type").getAsString();
-
-                HttpServlet servlet = katana.getServlet(type);
-
-                servlet.init(config);
-
-                if (config.has("priority")) {
-                    servlet.setPriority(config.get("priority").getAsInt());
-                }
-
-                if (config.has("hostname")) {
-                    String hostname = config.get("hostname").getAsString();
-                    servlet.getHosts().add(hostname);
-                    servlet.getAllowedHosts().add(hostname.replace(".", "\\.").replace("*", ".*"));
-                }
-
-                if (config.has("hostnames")) {
-                    for (JsonElement hostname : config.getAsJsonArray("hostnames")) {
-                        servlet.getHosts().add(hostname.getAsString());
-                        servlet.getAllowedHosts().add(hostname.getAsString().replace(".", "\\.").replace("*", ".*"));
-                    }
-                }
-
-                if (config.has("allowed_hosts")) {
-                    for (JsonElement hostname : config.getAsJsonArray("allowed_hosts")) {
-                        servlet.getAllowedHosts().add(hostname.getAsString().replace(".", "\\.").replace("*", ".*"));
-                    }
-                }
-
-                this.servlets.add(servlet);
+            if (servlet.getClass().isAnnotationPresent(Deprecated.class)) {
+                Katana.getInstance().getLogger().warn("The servlet %s is deprecated and will be removed in the future:\n%s", type, config.toString(true));
             }
+
+            servlet.init(config);
+
+            if (config.containsKey("priority")) {
+                servlet.setPriority(config.getNumber("priority").intValue());
+            }
+
+            if (config.containsKey("hostname")) {
+                String hostname = config.getString("hostname");
+
+                servlet.getHosts().add(hostname);
+                servlet.getAllowedHosts().add(
+                    hostname
+                        .replace(".", "\\.")
+                        .replace("*", ".*")
+                );
+            }
+
+            if (config.containsKey("hostnames")) {
+                for (JsonElement h_e : config.getArray("hostnames")) {
+                    String hostname = h_e.getAsString();
+
+                    servlet.getHosts().add(hostname);
+                    servlet.getAllowedHosts().add(
+                        hostname
+                            .replace(".", "\\.")
+                            .replace("*", ".*")
+                    );
+                }
+            }
+
+            if (config.containsKey("allowed_hosts")) {
+                for (JsonElement ah_e : config.getArray("allowed_hosts")) {
+                    String hostname = ah_e.getAsString();
+
+                    servlet.getAllowedHosts().add(
+                        hostname
+                            .replace(".", "\\.")
+                            .replace("*", ".*")
+                    );
+                }
+            }
+
+            this.servlets.add(servlet);
         }
 
         Collections.sort(this.servlets, (HttpServlet s1, HttpServlet s2) -> {
@@ -83,6 +100,7 @@ public class ServerConfiguration {
         });
     }
 
+    @JsonClass(exposeAll = true)
     public static class SSLConfiguration {
         public boolean enabled = false;
 

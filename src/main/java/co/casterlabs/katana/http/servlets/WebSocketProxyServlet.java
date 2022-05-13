@@ -10,16 +10,19 @@ import java.util.Map.Entry;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
-import com.google.gson.JsonObject;
-import com.google.gson.annotations.SerializedName;
-
-import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.websocket.Websocket;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketCloseCode;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
+import co.casterlabs.rakurai.json.Rson;
+import co.casterlabs.rakurai.json.annotating.JsonClass;
+import co.casterlabs.rakurai.json.annotating.JsonField;
+import co.casterlabs.rakurai.json.element.JsonObject;
+import co.casterlabs.rakurai.json.serialization.JsonParseException;
+import co.casterlabs.rakurai.json.validation.JsonValidationException;
 
+@Deprecated
 public class WebSocketProxyServlet extends HttpServlet {
     private HostConfiguration config;
 
@@ -28,18 +31,20 @@ public class WebSocketProxyServlet extends HttpServlet {
     }
 
     @Override
-    public void init(JsonObject config) {
-        this.config = Katana.GSON.fromJson(config, HostConfiguration.class);
+    public void init(JsonObject config) throws JsonValidationException, JsonParseException {
+        this.config = Rson.DEFAULT.fromJson(config, HostConfiguration.class);
     }
 
+    @JsonClass(exposeAll = true)
     private static class HostConfiguration {
-        @SerializedName("proxy_url")
+        @JsonField("proxy_url")
         public String proxyUrl;
 
-        @SerializedName("proxy_path")
+        @JsonField("proxy_path")
         public String proxyPath;
 
-        public boolean include_path;
+        @JsonField("include_path")
+        public boolean includePath;
 
     }
 
@@ -51,7 +56,7 @@ public class WebSocketProxyServlet extends HttpServlet {
             } else {
                 String url = this.config.proxyUrl;
 
-                if (this.config.include_path) {
+                if (this.config.includePath) {
                     url += session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
                     url += session.getQueryString();
                 }

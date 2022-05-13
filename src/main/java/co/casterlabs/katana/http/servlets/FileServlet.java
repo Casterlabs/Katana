@@ -2,16 +2,17 @@ package co.casterlabs.katana.http.servlets;
 
 import java.io.File;
 
-import com.google.gson.JsonObject;
-import com.google.gson.annotations.SerializedName;
-
 import co.casterlabs.katana.FileUtil;
-import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
+import co.casterlabs.rakurai.json.Rson;
+import co.casterlabs.rakurai.json.annotating.JsonClass;
+import co.casterlabs.rakurai.json.element.JsonObject;
+import co.casterlabs.rakurai.json.serialization.JsonParseException;
+import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import lombok.SneakyThrows;
 
 public class FileServlet extends HttpServlet {
@@ -22,13 +23,14 @@ public class FileServlet extends HttpServlet {
     }
 
     @Override
-    public void init(JsonObject config) {
-        this.config = Katana.GSON.fromJson(config, HostConfiguration.class);
+    public void init(JsonObject config) throws JsonValidationException, JsonParseException {
+        this.config = Rson.DEFAULT.fromJson(config, HostConfiguration.class);
     }
 
+    @JsonClass(exposeAll = true)
     private static class HostConfiguration {
-        @SerializedName("use_miki")
-        public boolean useMiki = true;
+//        @JsonClass("use_miki")
+//        public boolean useMiki = true;
 
         public String file;
 
@@ -45,11 +47,11 @@ public class FileServlet extends HttpServlet {
 
                 try {
                     if (file.exists() && file.isFile()) {
-                        if (this.config.useMiki && FileUtil.isMiki(file)) {
-                            return FileUtil.serveMiki(session, file, StandardHttpStatus.OK);
-                        } else {
-                            return FileUtil.serveFile(file, session);
-                        }
+//                        if (this.config.useMiki && FileUtil.isMiki(file)) {
+//                            return FileUtil.serveMiki(session, file, StandardHttpStatus.OK);
+//                        } else {
+                        return FileUtil.serveFile(file, session);
+//                        }
                     } else {
                         return Util.errorResponse(session, StandardHttpStatus.NOT_FOUND, "File not found.", router.getConfig());
                     }

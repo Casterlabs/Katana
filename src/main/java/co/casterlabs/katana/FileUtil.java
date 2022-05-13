@@ -2,21 +2,12 @@ package co.casterlabs.katana;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import co.casterlabs.miki.Miki;
-import co.casterlabs.miki.json.MikiFileAdapter;
-import co.casterlabs.miki.templating.WebRequest;
-import co.casterlabs.miki.templating.WebResponse;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
-import co.casterlabs.rakurai.io.http.HttpStatus;
 import co.casterlabs.rakurai.io.http.MimeTypes;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
-import xyz.e3ndr.fastloggingframework.logging.StringUtil;
 
 public class FileUtil {
 
@@ -126,58 +117,58 @@ public class FileUtil {
         return file;
     }
 
-    public static HttpResponse serveMiki(HttpSession session, File file, HttpStatus status) {
-        try {
-            Map<String, String> headers = new HashMap<>();
-
-            for (Map.Entry<String, List<String>> entry : session.getHeaders().entrySet()) {
-                headers.put(entry.getKey(), entry.getValue().get(0));
-            }
-
-            MikiFileAdapter miki = MikiFileAdapter.readFile(file);
-            WebRequest request = new WebRequest(session.getQueryParameters(), headers, session.getHost(), session.getMethod().name(), session.getUri(), session.getRequestBody(), session.getPort());
-
-            WebResponse response = miki.formatAsWeb(getMikiGlobals(session, status), request);
-
-            HttpResponse result = HttpResponse.newFixedLengthResponse(StandardHttpStatus.lookup(response.getStatus()), response.getResult());
-
-            if (response.getMime() == null) {
-                if (miki.getTemplateFile() != null) {
-                    result.setMimeType(Files.probeContentType(new File(miki.getTemplateFile()).toPath()));
-                }
-            } else {
-                result.setMimeType(response.getMime());
-            }
-
-            result.putAllHeaders(response.getHeaders());
-
-            return result;
-        } catch (Exception e) {
-            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, StringUtil.getExceptionStack(e), null);
-        }
-    }
-
-    public static Map<String, String> getMikiGlobals(HttpSession session, HttpStatus status) {
-        Map<String, String> globals = new HashMap<String, String>() {
-            private static final long serialVersionUID = -902644615560162682L;
-
-            @Override
-            public String get(Object key) {
-                return super.get(((String) key).toLowerCase());
-            }
-        };
-
-        globals.put("server", Katana.SERVER_DECLARATION);
-        globals.put("miki", String.format("Miki/%s (Katana/%s)", Miki.VERSION, Katana.VERSION));
-
-        globals.put("remote_ip_address", session.getRemoteIpAddress());
-        globals.put("host", session.getHost());
-
-        globals.put("status_code", String.valueOf(status.getStatusCode()));
-        globals.put("status_message", status.getDescription());
-        globals.put("status", status.getDescription().toUpperCase().replace(' ', '_'));
-
-        return globals;
-    }
+//    public static HttpResponse serveMiki(HttpSession session, File file, HttpStatus status) {
+//        try {
+//            Map<String, String> headers = new HashMap<>();
+//
+//            for (Map.Entry<String, List<String>> entry : session.getHeaders().entrySet()) {
+//                headers.put(entry.getKey(), entry.getValue().get(0));
+//            }
+//
+//            MikiFileAdapter miki = MikiFileAdapter.readFile(file);
+//            WebRequest request = new WebRequest(session.getQueryParameters(), headers, session.getHost(), session.getMethod().name(), session.getUri(), session.getRequestBody(), session.getPort());
+//
+//            WebResponse response = miki.formatAsWeb(getMikiGlobals(session, status), request);
+//
+//            HttpResponse result = HttpResponse.newFixedLengthResponse(StandardHttpStatus.lookup(response.getStatus()), response.getResult());
+//
+//            if (response.getMime() == null) {
+//                if (miki.getTemplateFile() != null) {
+//                    result.setMimeType(Files.probeContentType(new File(miki.getTemplateFile()).toPath()));
+//                }
+//            } else {
+//                result.setMimeType(response.getMime());
+//            }
+//
+//            result.putAllHeaders(response.getHeaders());
+//
+//            return result;
+//        } catch (Exception e) {
+//            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, StringUtil.getExceptionStack(e), null);
+//        }
+//    }
+//
+//    public static Map<String, String> getMikiGlobals(HttpSession session, HttpStatus status) {
+//        Map<String, String> globals = new HashMap<String, String>() {
+//            private static final long serialVersionUID = -902644615560162682L;
+//
+//            @Override
+//            public String get(Object key) {
+//                return super.get(((String) key).toLowerCase());
+//            }
+//        };
+//
+//        globals.put("server", Katana.SERVER_DECLARATION);
+//        globals.put("miki", String.format("Miki/%s (Katana/%s)", Miki.VERSION, Katana.VERSION));
+//
+//        globals.put("remote_ip_address", session.getRemoteIpAddress());
+//        globals.put("host", session.getHost());
+//
+//        globals.put("status_code", String.valueOf(status.getStatusCode()));
+//        globals.put("status_message", status.getDescription());
+//        globals.put("status", status.getDescription().toUpperCase().replace(' ', '_'));
+//
+//        return globals;
+//    }
 
 }

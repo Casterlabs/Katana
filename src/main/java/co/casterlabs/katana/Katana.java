@@ -5,14 +5,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-
 import co.casterlabs.katana.config.ServerConfiguration;
 import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.katana.http.servlets.HttpServlet;
+import co.casterlabs.rakurai.json.Rson;
+import co.casterlabs.rakurai.json.element.JsonArray;
+import co.casterlabs.rakurai.json.element.JsonElement;
 import lombok.Getter;
 import xyz.e3ndr.consolidate.CommandRegistry;
 import xyz.e3ndr.consolidate.exception.ArgumentsLengthException;
@@ -26,8 +24,6 @@ public class Katana {
     public static final String VERSION = "1.16.5";
     public static final String SERVER_DECLARATION = String.format("Katana/%s (%s)", Katana.VERSION, System.getProperty("os.name", "Generic"));
 
-    public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-
     private Map<String, Class<? extends HttpServlet>> servlets = new HashMap<>();
     private CommandRegistry<Void> commandRegistry = new CommandRegistry<>();
     private FastLogger logger = new FastLogger();
@@ -35,7 +31,10 @@ public class Katana {
     private Map<String, HttpRouter> routers = new HashMap<>();
     private Launcher launcher;
 
+    private static @Getter Katana instance;
+
     public Katana(Launcher launcher) {
+        instance = this;
         this.launcher = launcher;
         this.commandRegistry.addCommand(new KatanaCommands(this.commandRegistry, this));
 
@@ -59,12 +58,11 @@ public class Katana {
     public void init(JsonArray configurations) {
         for (JsonElement element : configurations) {
             try {
-                ServerConfiguration config = new ServerConfiguration(element.getAsJsonObject(), this);
+                ServerConfiguration config = Rson.DEFAULT.fromJson(element, ServerConfiguration.class);
 
                 this.addConfiguration(config);
             } catch (Exception e) {
-                this.logger.severe("Config generated an exception:");
-                e.printStackTrace();
+                this.logger.severe("An exception occurred whilst loading config:\n%s", e);
             }
         }
     }

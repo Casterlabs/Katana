@@ -1,14 +1,16 @@
 package co.casterlabs.katana.http.servlets;
 
-import com.google.gson.JsonObject;
-import com.google.gson.annotations.SerializedName;
-
-import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
+import co.casterlabs.rakurai.json.Rson;
+import co.casterlabs.rakurai.json.annotating.JsonClass;
+import co.casterlabs.rakurai.json.annotating.JsonField;
+import co.casterlabs.rakurai.json.element.JsonObject;
+import co.casterlabs.rakurai.json.serialization.JsonParseException;
+import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import lombok.SneakyThrows;
 
 public class RedirectServlet extends HttpServlet {
@@ -19,15 +21,16 @@ public class RedirectServlet extends HttpServlet {
     }
 
     @Override
-    public void init(JsonObject config) {
-        this.config = Katana.GSON.fromJson(config, HostConfiguration.class);
+    public void init(JsonObject config) throws JsonValidationException, JsonParseException {
+        this.config = Rson.DEFAULT.fromJson(config, HostConfiguration.class);
     }
 
+    @JsonClass(exposeAll = true)
     private static class HostConfiguration {
-        @SerializedName("redirectUrl")
+        @JsonField("redirect_url")
         public String redirectUrl;
 
-        @SerializedName("includePath")
+        @JsonField("include_path")
         public boolean includePath;
 
     }

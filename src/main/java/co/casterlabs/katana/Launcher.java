@@ -5,14 +5,14 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
-import com.google.gson.JsonArray;
-
 import co.casterlabs.katana.http.servlets.FileServlet;
 import co.casterlabs.katana.http.servlets.ProxyServlet;
 import co.casterlabs.katana.http.servlets.RedirectServlet;
 import co.casterlabs.katana.http.servlets.StaticServlet;
 import co.casterlabs.katana.http.servlets.WebSocketProxyServlet;
 import co.casterlabs.rakurai.io.http.server.HttpServerImplementation;
+import co.casterlabs.rakurai.json.Rson;
+import co.casterlabs.rakurai.json.element.JsonArray;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import picocli.CommandLine;
@@ -49,6 +49,7 @@ public class Launcher implements Runnable {
         new CommandLine(new Launcher()).execute(args);
     }
 
+    @SuppressWarnings("deprecation")
     @SneakyThrows
     @Override
     public void run() {
@@ -82,7 +83,7 @@ public class Launcher implements Runnable {
 
             Files.write(this.file.toPath(), bytes);
 
-            json = Katana.GSON.fromJson(new String(bytes, StandardCharsets.UTF_8), JsonArray.class);
+            json = Rson.DEFAULT.fromJson(new String(bytes, StandardCharsets.UTF_8), JsonArray.class);
         } else {
             json = Util.readFileAsJson(this.file, JsonArray.class);
         }

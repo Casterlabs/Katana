@@ -1,13 +1,15 @@
 package co.casterlabs.katana.http.servlets;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map.Entry;
 
-import com.google.gson.JsonObject;
-import com.google.gson.annotations.SerializedName;
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
 
-import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.DropConnectionException;
@@ -15,6 +17,16 @@ import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
+import co.casterlabs.rakurai.io.http.websocket.Websocket;
+import co.casterlabs.rakurai.io.http.websocket.WebsocketCloseCode;
+import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
+import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
+import co.casterlabs.rakurai.json.Rson;
+import co.casterlabs.rakurai.json.annotating.JsonClass;
+import co.casterlabs.rakurai.json.annotating.JsonField;
+import co.casterlabs.rakurai.json.element.JsonObject;
+import co.casterlabs.rakurai.json.serialization.JsonParseException;
+import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import kotlin.Pair;
 import lombok.AllArgsConstructor;
 import okhttp3.OkHttpClient;
@@ -32,26 +44,33 @@ public class ProxyServlet extends HttpServlet {
     }
 
     @Override
-    public void init(JsonObject config) {
-        this.config = Katana.GSON.fromJson(config, HostConfiguration.class);
+    public void init(JsonObject config) throws JsonValidationException, JsonParseException {
+        this.config = Rson.DEFAULT.fromJson(config, HostConfiguration.class);
 
         if (this.config.proxyPath != null) {
             this.config.proxyPath = this.config.proxyPath.replace("*", ".*");
         }
     }
 
+    @JsonClass(exposeAll = true)
     private static class HostConfiguration {
-        @SerializedName("proxy_url")
+        @JsonField("proxy_url")
         public String proxyUrl;
 
-        @SerializedName("proxy_path")
+        @JsonField("proxy_path")
         public String proxyPath;
 
-        @SerializedName("include_path")
+        @JsonField("include_path")
         public boolean includePath;
 
-        @SerializedName("forward_ip")
+        @JsonField("forward_ip")
         public boolean forwardIp;
+
+        @JsonField("allow_http")
+        public boolean allowHttp;
+
+        @JsonField("allow_websockets")
+        public boolean allowWebsockets;
 
     }
 
@@ -135,6 +154,116 @@ public class ProxyServlet extends HttpServlet {
         } else {
             return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Proxy url not set.", router.getConfig());
         }
+    }
+
+    @Override
+    public WebsocketListener serveWebsocket(WebsocketSession session, HttpRouter router) {
+        if (!this.config.allowWebsockets) {
+            return null;
+        }
+
+        if (this.config.proxyUrl != null) {
+            if ((this.config.proxyPath != null) && !session.getUri().matches(this.config.proxyPath)) {
+                return null;
+            } else {
+                String url = this.config.proxyUrl;
+
+                if (this.config.includePath) {
+                    url += session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
+                    url += session.getQueryString();
+                }
+
+                try {
+                    URI uri = new URI(url);
+
+                    return new WebsocketListener() {
+                        private RemoteWebSocketConnection remote;
+
+                        @Override
+                        public void onOpen(Websocket websocket) {
+                            this.remote = new RemoteWebSocketConnection(uri, websocket);
+
+                            for (Entry<String, List<String>> entry : session.getHeaders().entrySet()) {
+                                this.remote.addHeader(entry.getKey(), entry.getValue().get(0));
+                            }
+
+                            try {
+                                if (!this.remote.connectBlocking()) {
+                                    websocket.close(WebsocketCloseCode.NORMAL);
+                                }
+                            } catch (IOException | InterruptedException e) {
+                                try {
+                                    websocket.close(WebsocketCloseCode.NORMAL);
+                                } catch (IOException ignored) {}
+                            }
+                        }
+
+                        @Override
+                        public void onText(Websocket websocket, String message) {
+                            this.remote.send(message);
+                        }
+
+                        @Override
+                        public void onBinary(Websocket websocket, byte[] bytes) {
+                            this.remote.send(bytes);
+                        }
+
+                        @Override
+                        public void onClose(Websocket websocket) {
+                            if (!this.remote.isClosing()) {
+                                this.remote.close();
+                            }
+                        }
+
+                    };
+                } catch (URISyntaxException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static class RemoteWebSocketConnection extends WebSocketClient {
+        private Websocket client;
+
+        public RemoteWebSocketConnection(URI serverUri, Websocket client) {
+            super(serverUri);
+
+            this.setTcpNoDelay(true);
+
+            this.client = client;
+        }
+
+        @Override
+        public void onOpen(ServerHandshake handshakedata) {}
+
+        @Override
+        public void onMessage(String message) {
+            try {
+                this.client.send(message);
+            } catch (IOException e) {}
+        }
+
+        @Override
+        public void onMessage(ByteBuffer message) {
+            try {
+                this.client.send(message.array());
+            } catch (IOException e) {}
+        }
+
+        @Override
+        public void onClose(int code, String reason, boolean remote) {
+            try {
+                this.client.close(WebsocketCloseCode.NORMAL);
+            } catch (IOException e) {}
+        }
+
+        @Override
+        public void onError(Exception e) {}
+
     }
 
     @AllArgsConstructor

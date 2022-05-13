@@ -107,12 +107,12 @@
 		</dependency>
 
 		<!-- For servlets -->
-		<dependency>
+		<!-- <dependency>
 			<groupId>com.github.casterlabs</groupId>
 			<artifactId>Miki</artifactId>
 			<version>0458366</version>
 			<scope>compile</scope>
-		</dependency>
+		</dependency> -->
 
 		<dependency>
 			<groupId>com.squareup.okhttp3</groupId>
