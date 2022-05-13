@@ -36,7 +36,7 @@ import xyz.e3ndr.reflectionlib.ReflectionLib;
 
 @Getter
 public class HttpRouter implements HttpListener {
-    private static String ALLOWED_METHODS;
+    private static final String ALLOWED_METHODS;
 
     private MultiValuedMap<String, HttpServlet> hostnames = new ArrayListValuedHashMap<>();
     private List<Reason> failReasons = new ArrayList<>();
@@ -80,7 +80,7 @@ public class HttpRouter implements HttpListener {
 
         builder.setPort(this.config.getPort());
         builder.setHttp2Enabled(true);
-        builder.setBehindProxy(config.isBehindProxy());
+        builder.setBehindProxy(this.config.isBehindProxy());
         builder.setLogsDir(this.config.getLogsDir());
 
         this.server = builder.build(this);
@@ -90,19 +90,19 @@ public class HttpRouter implements HttpListener {
         ServerConfiguration.SSLConfiguration ssl = this.config.getSSL();
         if ((ssl != null) && ssl.enabled) {
             try {
-                File certificate = new File(ssl.keystore);
+                File keystore = new File(ssl.keystore);
 
-                if (!certificate.exists()) {
+                if (!keystore.exists()) {
                     this.logger.severe("Unable to find SSL certificate file.");
                 } else {
-                    SSLConfiguration rakurai = new SSLConfiguration(certificate, ssl.keystore_password.toCharArray());
+                    SSLConfiguration rakuraiConfig = new SSLConfiguration(keystore, ssl.keystore_password.toCharArray());
 
-                    rakurai.setDHSize(ssl.dh_size);
-                    rakurai.setEnabledCipherSuites(ssl.enabled_cipher_suites);
-                    rakurai.setEnabledTlsVersions(ssl.tls);
-                    rakurai.setPort(ssl.port);
+                    rakuraiConfig.setDHSize(ssl.dh_size);
+                    rakuraiConfig.setEnabledCipherSuites(ssl.enabled_cipher_suites);
+                    rakuraiConfig.setEnabledTlsVersions(ssl.tls);
+                    rakuraiConfig.setPort(ssl.port);
 
-                    builder.setSsl(rakurai);
+                    builder.setSsl(rakuraiConfig);
 
                     this.forceHttps = ssl.force;
                     this.serverSecure = builder.buildSecure(this);
@@ -134,7 +134,7 @@ public class HttpRouter implements HttpListener {
             if (this.config.isDebugMode() || katana.getLauncher().isDebug()) {
                 serverLogger.setCurrentLevel(LogLevel.ALL);
             } else {
-                serverLogger.setCurrentLevel(LogLevel.WARNING);
+                serverLogger.setCurrentLevel(LogLevel.WARNING); // Allows FATAL, SEVERE, and WARNING
             }
         }
     }
@@ -201,7 +201,7 @@ public class HttpRouter implements HttpListener {
                             response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
                             response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
                             this.logger.debug("Set CORS headers for %s", referer);
-                            session.getLogger().info("Added cors declaration.");
+                            session.getLogger().info("Added CORS declaration.");
                         }
                     }
 
@@ -210,37 +210,36 @@ public class HttpRouter implements HttpListener {
                     Collection<HttpServlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
                     HttpResponse response = this.iterateConfigs(session, servlets);
 
+                    if (response == null) {
+                        return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "No servlet available.", this.config);
+                    }
+
                     // Allow CORS
                     String originHeader = session.getHeader("Origin");
-                    if (response != null) {
-                        response.putHeader("server", Katana.SERVER_DECLARATION);
 
-                        if (originHeader != null) {
-                            String[] split = originHeader.split("://");
+                    response.putHeader("server", Katana.SERVER_DECLARATION);
 
-                            if (split.length == 2) {
-                                String protocol = split[0];
-                                String referer = split[1].split("/")[0]; // Strip protocol and uri
+                    if (originHeader != null) {
+                        String[] split = originHeader.split("://");
 
-                                for (HttpServlet servlet : servlets) {
-                                    if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
-                                        response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
-                                        response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
-                                        response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
-                                        this.logger.debug("Set CORS header for %s", referer);
-                                        session.getLogger().info("Added cors declaration.");
-                                        break;
-                                    }
+                        if (split.length == 2) {
+                            String protocol = split[0];
+                            String referer = split[1].split("/")[0]; // Strip protocol and uri
+
+                            for (HttpServlet servlet : servlets) {
+                                if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
+                                    response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
+                                    response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
+                                    response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
+                                    this.logger.debug("Set CORS header for %s", referer);
+                                    session.getLogger().info("Added CORS declaration.");
+                                    break;
                                 }
                             }
                         }
-
-                        FastLogger.logStatic(response);
-
-                        return response;
-                    } else {
-                        return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "No servlet available.", this.config);
                     }
+
+                    return response;
                 }
             }
         } catch (Throwable t) {
@@ -286,10 +285,10 @@ public class HttpRouter implements HttpListener {
     }
 
     public boolean isRunning() {
-        boolean nanoAlive = (this.server != null) ? this.server.isAlive() : false;
-        boolean nanoSecureAlive = (this.serverSecure != null) ? this.serverSecure.isAlive() : false;
+        boolean serverAlive = (this.server != null) ? this.server.isAlive() : false;
+        boolean serverSecureAlive = (this.serverSecure != null) ? this.serverSecure.isAlive() : false;
 
-        return nanoAlive || nanoSecureAlive;
+        return serverAlive || serverSecureAlive;
     }
 
     public int[] getPorts() {
