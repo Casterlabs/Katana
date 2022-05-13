@@ -167,10 +167,7 @@ public class HttpRouter implements HttpListener {
     // Interacts with servlets
     @Override
     public @Nullable HttpResponse serveSession(@NonNull String host, @NonNull HttpSession session, boolean secure) {
-        FastLogger.logStatic(1);
-
-        session.getLogger().setCurrentLevel(LogLevel.ALL);
-        session.getLogger().severe("test");
+        host = host.split(":")[0];
 
         try {
             if (!secure && (!this.allowInsecure || this.forceHttps)) {
