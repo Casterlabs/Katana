@@ -35,8 +35,14 @@ public class ServerConfiguration {
     @JsonField("debug_mode")
     private boolean debugMode;
 
-    @JsonField("logs_dir")
     private File logsDir;
+
+    @JsonDeserializationMethod("logs_dir")
+    private void $deserialize_logs_dir(JsonElement dir) {
+        if (dir.isJsonString()) {
+            this.logsDir = new File(dir.getAsString());
+        }
+    }
 
     @JsonDeserializationMethod("hosts")
     private void $deserialize_hosts(JsonElement hosts) throws JsonValidationException, JsonParseException {

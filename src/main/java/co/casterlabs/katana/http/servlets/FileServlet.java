@@ -29,7 +29,7 @@ public class FileServlet extends HttpServlet {
     }
 
     @JsonClass(exposeAll = true)
-    private static class HostConfiguration {
+    public static class HostConfiguration {
 //        @JsonClass("use_miki")
 //        public boolean useMiki = true;
 

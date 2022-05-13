@@ -36,7 +36,7 @@ public class StaticServlet extends HttpServlet {
     }
 
     @JsonClass(exposeAll = true)
-    private static class HostConfiguration {
+    public static class HostConfiguration {
         @JsonField("require_file_extensions")
         public boolean requireFileExtensions;
 

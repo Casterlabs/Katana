@@ -74,7 +74,7 @@ public class ProxyServlet extends HttpServlet {
     }
 
     @JsonClass(exposeAll = true)
-    private static class HostConfiguration {
+    public static class HostConfiguration {
         @JsonField("proxy_url")
         public String proxyUrl;
 

@@ -26,7 +26,7 @@ public class RedirectServlet extends HttpServlet {
     }
 
     @JsonClass(exposeAll = true)
-    private static class HostConfiguration {
+    public static class HostConfiguration {
         @JsonField("redirect_url")
         public String redirectUrl;
 
