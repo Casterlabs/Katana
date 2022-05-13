@@ -10,7 +10,7 @@
 
 # VSCode
 .vscode/
-.apt_generated/
+.apt_generated_tests/
 
 # Common
 target/
