@@ -23,6 +23,7 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
 @Getter
+@SuppressWarnings("deprecation")
 @Command(name = "start", mixinStandardHelpOptions = true, version = "Katana v" + Katana.VERSION, description = "Starts the Katana server")
 public class Launcher implements Runnable {
 
@@ -49,7 +50,6 @@ public class Launcher implements Runnable {
         new CommandLine(new Launcher()).execute(args);
     }
 
-    @SuppressWarnings("deprecation")
     @SneakyThrows
     @Override
     public void run() {

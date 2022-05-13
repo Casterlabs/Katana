@@ -16,6 +16,7 @@ import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.annotating.JsonField;
 import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
+import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import lombok.NonNull;
 import lombok.SneakyThrows;
@@ -44,32 +45,34 @@ public class StaticServlet extends HttpServlet {
 
         public String directory;
 
+        @JsonValidate
+        private void $validate() {
+            assert this.directory != null : "The `directory` option must be set.";
+            assert !this.directory.isEmpty() : "The `directory` option must not be empty.";
+        }
+
     }
 
     @SneakyThrows
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
-        if (this.config.directory != null) {
-            String uri = decodeURIComponent(session.getUri());
-            File directory = new File(this.config.directory);
+        String uri = decodeURIComponent(session.getUri());
+        File directory = new File(this.config.directory);
 
-            File file = FileUtil.getFile(directory, uri, this.config.requireFileExtensions, defaultFiles);
+        File file = FileUtil.getFile(directory, uri, this.config.requireFileExtensions, defaultFiles);
 
-            try {
-                if (file.getCanonicalPath().startsWith(directory.getCanonicalPath()) && file.exists() && file.isFile()) {
-//                    if (this.config.useMiki && FileUtil.isMiki(file)) {
-//                        return FileUtil.serveMiki(session, file, StandardHttpStatus.OK);
-//                    } else {
-                    return FileUtil.serveFile(file, session);
-//                    }
-                } else {
-                    return Util.errorResponse(session, StandardHttpStatus.NOT_FOUND, "File not found.", router.getConfig());
-                }
-            } catch (Exception e) {
-                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Unable to read file.", router.getConfig());
+        try {
+            if (file.getCanonicalPath().startsWith(directory.getCanonicalPath()) && file.exists() && file.isFile()) {
+//                if (this.config.useMiki && FileUtil.isMiki(file)) {
+//                    return FileUtil.serveMiki(session, file, StandardHttpStatus.OK);
+//                } else {
+                return FileUtil.serveFile(file, session);
+//                }
             }
-        } else {
-            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Serve directory not set.", router.getConfig());
+
+            return Util.errorResponse(session, StandardHttpStatus.NOT_FOUND, "File not found.", router.getConfig());
+        } catch (Exception e) {
+            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Unable to read file.", router.getConfig());
         }
     }
 
