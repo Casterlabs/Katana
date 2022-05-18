@@ -159,6 +159,12 @@
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
+			<groupId>org.fusesource.jansi</groupId>
+			<artifactId>jansi</artifactId>
+			<version>1.18</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
 			<groupId>com.github.e3ndr</groupId>
 			<artifactId>ReflectionLib</artifactId>
 			<version>1.0.0</version>

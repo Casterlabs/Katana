@@ -77,7 +77,7 @@ public class Launcher implements Runnable {
         JsonArray json;
 
         if (!this.file.exists()) {
-            InputStream in = this.getClass().getResourceAsStream("/resources/config.json");
+            InputStream in = this.getClass().getResourceAsStream("/config.json");
             byte[] bytes = new byte[in.available()];
 
             in.read(bytes);
