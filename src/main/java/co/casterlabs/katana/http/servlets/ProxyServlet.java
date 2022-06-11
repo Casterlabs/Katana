@@ -1,6 +1,7 @@
 package co.casterlabs.katana.http.servlets;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -29,6 +30,7 @@ import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import kotlin.Pair;
 import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -36,24 +38,25 @@ import okhttp3.Response;
 
 public class ProxyServlet extends HttpServlet {
     private static final List<String> DISALLOWED_HEADERS = Arrays.asList(
-        "Connection",
-        "Keep-Alive",
-        "Proxy-Authenticate",
-        "Proxy-Authorization",
-        "TE",
-        "Trailers",
-        "Transfer-Encoding",
-        "Upgrade",
-        "Sec-WebSocket-Key",
-        "Sec-WebSocket-Extensions",
-        "Sec-WebSocket-Protocol",
-        "Sec-WebSocket-Version",
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailers",
+        "host",
+        "transfer-encoding",
+        "upgrade",
+        "sec-websocket-key",
+        "sec-websocket-extensions",
+        "sec-websocket-protocol",
+        "sec-websocket-version",
         "remote-addr",
         "http-client-ip",
-        "Host",
-        "X-Forwarded-For",
-        "X-Remote-IP",
-        "X-Katana-IP"
+        "host",
+        "x-forwarded-for",
+        "x-remote-ip",
+        "x-katana-ip"
     );
 
     private static final OkHttpClient client = new OkHttpClient();
@@ -67,10 +70,6 @@ public class ProxyServlet extends HttpServlet {
     @Override
     public void init(JsonObject config) throws JsonValidationException, JsonParseException {
         this.config = Rson.DEFAULT.fromJson(config, HostConfiguration.class);
-
-        if (this.config.proxyPath != null) {
-            this.config.proxyPath = this.config.proxyPath.replace("*", ".*");
-        }
     }
 
     @JsonClass(exposeAll = true)
@@ -101,6 +100,7 @@ public class ProxyServlet extends HttpServlet {
 
     }
 
+    @SneakyThrows
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         if (!this.config.allowHttp) {
@@ -140,7 +140,7 @@ public class ProxyServlet extends HttpServlet {
         } catch (IOException e) {}
 
         for (Entry<String, List<String>> header : session.getHeaders().entrySet()) {
-            String key = header.getKey();
+            String key = header.getKey().toLowerCase();
 
             if (!DISALLOWED_HEADERS.contains(key)) {
                 for (String value : header.getValue()) {
@@ -157,14 +157,17 @@ public class ProxyServlet extends HttpServlet {
 
         Request request = builder.build();
 
-        try (Response response = client.newCall(request).execute()) {
+        Response response = client.newCall(request).execute();
+
+        try {
             HttpStatus status = new HttpStatusAdapter(response.code());
-            long responseLen = response.body().contentLength();
+            long responseLen = Long.parseLong(response.header("Content-Length"));
+            InputStream responseStream = response.body().byteStream();
 
             //@formatter:off
             HttpResponse result = (responseLen == -1) ?
-                    HttpResponse.newChunkedResponse(status, response.body().byteStream()) : 
-                    HttpResponse.newFixedLengthResponse(status, response.body().byteStream(), responseLen); // Ugh.
+                    HttpResponse.newChunkedResponse(status, responseStream) : 
+                    HttpResponse.newFixedLengthResponse(status, responseStream, responseLen); // Ugh.
             //@formatter:on
 
             for (Pair<? extends String, ? extends String> header : response.headers()) {
@@ -177,12 +180,11 @@ public class ProxyServlet extends HttpServlet {
 
             result.setMimeType(response.header("Content-Type", "application/octet-stream"));
 
-            return result;
-        } catch (IOException e) {
-            // e.printStackTrace();
-            // Rakurai will automatically close the stream if a write error or
-            // end of stream is reached.
-            throw new DropConnectionException();
+            return result; // We don't want to close it.
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.close();
+            return null;
         }
     }
 
