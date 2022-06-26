@@ -10,7 +10,6 @@ import co.casterlabs.katana.http.servlets.ProxyServlet;
 import co.casterlabs.katana.http.servlets.RedirectServlet;
 import co.casterlabs.katana.http.servlets.StaticServlet;
 import co.casterlabs.katana.http.servlets.WebSocketProxyServlet;
-import co.casterlabs.rakurai.io.http.server.HttpServerImplementation;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import lombok.Getter;
@@ -38,13 +37,6 @@ public class Launcher implements Runnable {
             "--debug"
     }, description = "Enables debug logging")
     private boolean debug = false;
-
-    @Getter
-    @Option(names = {
-            "-s",
-            "--server-implementation"
-    }, description = "Sets the desired server implementation")
-    private HttpServerImplementation implementation = HttpServerImplementation.UNDERTOW;
 
     public static void main(String[] args) {
         ClassLoader.getSystemClassLoader().setDefaultAssertionStatus(true); // Enable assertions

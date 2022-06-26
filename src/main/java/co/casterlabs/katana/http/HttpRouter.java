@@ -24,6 +24,7 @@ import co.casterlabs.rakurai.io.http.StandardHttpStatus;
 import co.casterlabs.rakurai.io.http.server.HttpListener;
 import co.casterlabs.rakurai.io.http.server.HttpServer;
 import co.casterlabs.rakurai.io.http.server.HttpServerBuilder;
+import co.casterlabs.rakurai.io.http.server.HttpServerImplementation;
 import co.casterlabs.rakurai.io.http.server.SSLConfiguration;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
@@ -36,6 +37,7 @@ import xyz.e3ndr.reflectionlib.ReflectionLib;
 
 @Getter
 public class HttpRouter implements HttpListener {
+    private static final HttpServerImplementation SERVER_IMPLEMENTATION = HttpServerImplementation.UNDERTOW;
     private static final String ALLOWED_METHODS;
 
     private MultiValuedMap<String, HttpServlet> hostnames = new ArrayListValuedHashMap<>();
@@ -76,7 +78,7 @@ public class HttpRouter implements HttpListener {
         this.katana = katana;
         this.config = config;
 
-        HttpServerBuilder builder = HttpServerBuilder.get(this.katana.getLauncher().getImplementation());
+        HttpServerBuilder builder = HttpServerBuilder.get(SERVER_IMPLEMENTATION);
 
         builder.setPort(this.config.getPort());
         builder.setHttp2Enabled(true);
