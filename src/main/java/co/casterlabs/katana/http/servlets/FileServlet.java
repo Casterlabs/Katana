@@ -49,7 +49,7 @@ public class FileServlet extends HttpServlet {
     @SneakyThrows
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
-        if (!session.getUri().equals(this.config.path)) {
+        if (!session.getUri().matches(this.config.path)) {
             return null;
         }
 
