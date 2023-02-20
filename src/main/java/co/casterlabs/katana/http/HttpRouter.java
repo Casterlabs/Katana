@@ -133,7 +133,7 @@ public class HttpRouter implements HttpListener {
         }
 
         for (FastLogger serverLogger : this.serverLoggers) {
-            if (this.config.isDebugMode() || katana.getLauncher().isDebug()) {
+            if (this.config.isDebugMode() || katana.getLauncher().isTrace()) {
                 serverLogger.setCurrentLevel(LogLevel.ALL);
             } else {
                 serverLogger.setCurrentLevel(LogLevel.WARNING); // Allows FATAL, SEVERE, and WARNING

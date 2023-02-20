@@ -27,14 +27,14 @@ public class Launcher implements Runnable {
     @Option(names = {
             "-c",
             "--config"
-    }, description = "The config file to use")
+    }, description = "The config file to use.")
     private File file = new File("config.json");
 
     @Option(names = {
-            "-d",
-            "--debug"
-    }, description = "Enables debug logging")
-    private boolean debug = false;
+            "-trace",
+            "--trace"
+    }, description = "Forcefully enables trace logging across all of the servers.")
+    private boolean trace = false;
 
     public static void main(String[] args) {
         ClassLoader.getSystemClassLoader().setDefaultAssertionStatus(true); // Enable assertions
@@ -44,9 +44,9 @@ public class Launcher implements Runnable {
     @SneakyThrows
     @Override
     public void run() {
-        if (this.debug) {
+        if (this.trace) {
             FastLoggingFramework.setDefaultLevel(LogLevel.ALL);
-            new FastLogger().debug("Debug mode enabled.");
+            new FastLogger().debug("Trace mode enabled.");
         }
 
         Katana katana = new Katana(this);
