@@ -75,6 +75,7 @@ public class Katana {
 
                         this.addHttpConfiguration(config);
                     } catch (Exception e) {
+                        updatedResult.add(element); // Add back the raw json, let the user fix it.
                         this.logger.severe("An exception occurred whilst loading config:\n%s", e);
                     }
                     break;
