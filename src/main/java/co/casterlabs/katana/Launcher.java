@@ -9,7 +9,6 @@ import co.casterlabs.katana.http.servlets.FileServlet;
 import co.casterlabs.katana.http.servlets.ProxyServlet;
 import co.casterlabs.katana.http.servlets.RedirectServlet;
 import co.casterlabs.katana.http.servlets.StaticServlet;
-import co.casterlabs.katana.http.servlets.WebSocketProxyServlet;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import lombok.Getter;
@@ -22,7 +21,6 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
 @Getter
-@SuppressWarnings("deprecation")
 @Command(name = "start", mixinStandardHelpOptions = true, version = "Katana v" + Katana.VERSION, description = "Starts the Katana server")
 public class Launcher implements Runnable {
 
@@ -55,7 +53,6 @@ public class Launcher implements Runnable {
 
         katana.addServlet("STATIC", StaticServlet.class);
         katana.addServlet("PROXY", ProxyServlet.class);
-        katana.addServlet("WEBSOCKETPROXY", WebSocketProxyServlet.class);
         katana.addServlet("REDIRECT", RedirectServlet.class);
         katana.addServlet("FILE", FileServlet.class);
 
