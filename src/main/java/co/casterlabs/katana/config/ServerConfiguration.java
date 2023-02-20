@@ -109,14 +109,19 @@ public class ServerConfiguration {
     @JsonClass(exposeAll = true)
     public static class SSLConfiguration {
         public boolean enabled = false;
-
-        public TLSVersion[] tls = TLSVersion.values();
-        public String[] enabledCipherSuites = null; // Null = All Available
-        public boolean allowInsecure = true;
-        public boolean force = false;
-        public int dhSize = 2048;
         public int port = 443;
 
+        public TLSVersion[] tls = TLSVersion.values();
+        @JsonField("enabled_cipher_suites")
+        public String[] enabledCipherSuites = null; // Null = All Available
+        @JsonField("dh_size")
+        public int dhSize = 2048;
+
+        @JsonField("allow_insecure")
+        public boolean allowInsecure = true;
+        public boolean force = false;
+
+        @JsonField("keystore_password")
         public String keystorePassword = "";
         public String keystore = "";
 
