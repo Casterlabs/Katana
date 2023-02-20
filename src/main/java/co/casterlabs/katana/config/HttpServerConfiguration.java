@@ -145,8 +145,8 @@ public class HttpServerConfiguration {
             JsonObject asObject = new JsonObject()
                 .put("type", servlet.getType().toLowerCase())
                 .put("priority", servlet.getPriority())
-                .put("hostnames", JsonArray.of(servlet.getHosts()))
-                .put("cors_allowed_hosts", JsonArray.of(servlet.getCorsAllowedHosts()));
+                .put("hostnames", Rson.DEFAULT.toJson(servlet.getHosts()))
+                .put("cors_allowed_hosts", Rson.DEFAULT.toJson(servlet.getCorsAllowedHosts()));
 
             // Copy the config in.
             JsonObject config = (JsonObject) Rson.DEFAULT.toJson(servlet.getConfig());
