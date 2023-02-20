@@ -67,7 +67,21 @@ public class Launcher implements Runnable {
         if (this.file.exists()) {
             json = Util.readFileAsJson(this.file, JsonArray.class);
         } else {
-            json = JsonArray.of(JsonObject.singleton("type", "http")); // Auto populate a default.
+            // Auto populate a default.
+            json = JsonArray.of(
+                new JsonObject()
+                    .put("type", "http")
+                    .put("logs_dir", "./logs")
+                    .put(
+                        "servlets",
+                        JsonArray.of(
+                            new JsonObject()
+                                .put("type", "static")
+                                .put("hostnames", JsonArray.of("*"))
+                                .put("directory", "./www")
+                        )
+                    )
+            );
         }
 
         String newConfigJson = katana.init(json);
