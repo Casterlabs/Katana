@@ -23,7 +23,7 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 
 public class StaticServlet extends HttpServlet {
-    private static final List<String> defaultFiles = Arrays.asList("index.html", "index.miki", "index2.html", "default.html", "home.html", "placeholder.html");
+    private static final List<String> defaultFiles = Arrays.asList("index.html", /*"index.miki",*/ "index2.html", "default.html", "home.html");
 
     private @Getter HostConfiguration config;
 
