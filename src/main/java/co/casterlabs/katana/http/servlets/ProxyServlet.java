@@ -34,6 +34,7 @@ import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import kotlin.Pair;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.SneakyThrows;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -65,7 +66,7 @@ public class ProxyServlet extends HttpServlet {
 
     private static final OkHttpClient client = new OkHttpClient();
 
-    private HostConfiguration config;
+    private @Getter HostConfiguration config;
 
     public ProxyServlet() {
         super("PROXY");

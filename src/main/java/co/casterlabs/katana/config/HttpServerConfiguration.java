@@ -8,23 +8,22 @@ import java.util.List;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.io.http.TLSVersion;
+import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.annotating.JsonDeserializationMethod;
 import co.casterlabs.rakurai.json.annotating.JsonField;
+import co.casterlabs.rakurai.json.annotating.JsonSerializationMethod;
+import co.casterlabs.rakurai.json.element.JsonArray;
 import co.casterlabs.rakurai.json.element.JsonElement;
 import co.casterlabs.rakurai.json.element.JsonObject;
+import co.casterlabs.rakurai.json.element.JsonString;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import lombok.Getter;
 
 @Getter
 @JsonClass(exposeAll = true)
-public class ServerConfiguration {
-    @JsonField("ssl")
-    private SSLConfiguration SSL = new SSLConfiguration();
-
-    private List<HttpServlet> servlets = new ArrayList<>();
-
+public class HttpServerConfiguration {
     private String name = "www";
 
     private int port = 80;
@@ -37,11 +36,21 @@ public class ServerConfiguration {
 
     private File logsDir;
 
+    @JsonField("ssl")
+    private SSLConfiguration SSL = new SSLConfiguration();
+
+    private List<HttpServlet> servlets = new ArrayList<>();
+
     @JsonDeserializationMethod("logs_dir")
     private void $deserialize_logs_dir(JsonElement dir) {
         if (dir.isJsonString()) {
             this.logsDir = new File(dir.getAsString());
         }
+    }
+
+    @JsonSerializationMethod("logs_dir")
+    private JsonElement $serialize_logs_dir() {
+        return new JsonString(this.logsDir.toString());
     }
 
     @JsonDeserializationMethod("hosts")
@@ -52,25 +61,33 @@ public class ServerConfiguration {
 
             HttpServlet servlet = Katana.getInstance().getServlet(type);
 
+            // Deprecated stuff.
             if (servlet.getClass().isAnnotationPresent(Deprecated.class)) {
                 Katana.getInstance().getLogger().warn("The servlet %s is deprecated and will be removed in the future:\n%s", type, config.toString(true));
-            }
-
-            servlet.init(config);
-
-            if (config.containsKey("priority")) {
-                servlet.setPriority(config.getNumber("priority").intValue());
             }
 
             if (config.containsKey("hostname")) {
                 String hostname = config.getString("hostname");
 
                 servlet.getHosts().add(hostname);
-                servlet.getAllowedHosts().add(
+                servlet.getCorsAllowedHosts().add(
                     hostname
                         .replace(".", "\\.")
                         .replace("*", ".*")
                 );
+            }
+
+            if (config.containsKey("allowed_hosts")) {
+                // Remap the allowed_hosts key to allowed_cors_hosts.
+                config.put("cors_allowed_hosts", config.get("allowed_hosts"));
+            }
+
+            // Init the servlet.
+            servlet.init(config);
+
+            // Read the rest of the config.
+            if (config.containsKey("priority")) {
+                servlet.setPriority(config.getNumber("priority").intValue());
             }
 
             if (config.containsKey("hostnames")) {
@@ -78,7 +95,7 @@ public class ServerConfiguration {
                     String hostname = h_e.getAsString();
 
                     servlet.getHosts().add(hostname);
-                    servlet.getAllowedHosts().add(
+                    servlet.getCorsAllowedHosts().add(
                         hostname
                             .replace(".", "\\.")
                             .replace("*", ".*")
@@ -86,11 +103,10 @@ public class ServerConfiguration {
                 }
             }
 
-            if (config.containsKey("allowed_hosts")) {
-                for (JsonElement ah_e : config.getArray("allowed_hosts")) {
-                    String hostname = ah_e.getAsString();
-
-                    servlet.getAllowedHosts().add(
+            if (config.containsKey("cors_allowed_hosts")) {
+                for (JsonElement ach : config.getArray("cors_allowed_hosts")) {
+                    String hostname = ach.getAsString();
+                    servlet.getCorsAllowedHosts().add(
                         hostname
                             .replace(".", "\\.")
                             .replace("*", ".*")
@@ -104,6 +120,27 @@ public class ServerConfiguration {
         Collections.sort(this.servlets, (HttpServlet s1, HttpServlet s2) -> {
             return s1.getPriority() > s2.getPriority() ? -1 : 1;
         });
+    }
+
+    @JsonSerializationMethod("hosts")
+    private JsonElement $serialize_hosts() {
+        JsonArray arr = new JsonArray();
+
+        for (HttpServlet servlet : this.servlets) {
+            JsonObject asObject = new JsonObject()
+                .put("type", servlet.getType().toLowerCase())
+                .put("priority", servlet.getPriority())
+                .put("hostnames", JsonArray.of(servlet.getHosts()))
+                .put("cors_allowed_hosts", JsonArray.of(servlet.getCorsAllowedHosts()));
+
+            // Copy the config in.
+            JsonObject config = (JsonObject) Rson.DEFAULT.toJson(servlet.getConfig());
+            asObject.toMap().putAll(config.toMap());
+
+            arr.add(asObject);
+        }
+
+        return arr;
     }
 
     @JsonClass(exposeAll = true)

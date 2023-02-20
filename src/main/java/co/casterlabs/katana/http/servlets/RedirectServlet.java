@@ -12,10 +12,11 @@ import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
+import lombok.Getter;
 import lombok.SneakyThrows;
 
 public class RedirectServlet extends HttpServlet {
-    private HostConfiguration config;
+    private @Getter HostConfiguration config;
 
     public RedirectServlet() {
         super("REDIRECT");

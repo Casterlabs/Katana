@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.collections4.MultiValuedMap;
 import org.jetbrains.annotations.Nullable;
 
-import co.casterlabs.katana.config.ServerConfiguration;
+import co.casterlabs.katana.config.HttpServerConfiguration;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
@@ -70,7 +70,7 @@ public class Util {
         return false;
     }
 
-    public static HttpResponse errorResponse(HttpSession session, HttpStatus status, String description, @Nullable ServerConfiguration config) {
+    public static HttpResponse errorResponse(HttpSession session, HttpStatus status, String description, @Nullable HttpServerConfiguration config) {
         // @formatter:off
         return HttpResponse.newFixedLengthResponse(status, Katana.ERROR_HTML
                 .replace("$RESPONSECODE", String.valueOf(status.getStatusCode()))

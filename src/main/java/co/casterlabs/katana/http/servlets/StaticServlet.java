@@ -18,13 +18,14 @@ import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 
 public class StaticServlet extends HttpServlet {
     private static final List<String> defaultFiles = Arrays.asList("index.html", "index.miki", "index2.html", "default.html", "home.html", "placeholder.html");
 
-    private HostConfiguration config;
+    private @Getter HostConfiguration config;
 
     public StaticServlet() {
         super("STATIC");

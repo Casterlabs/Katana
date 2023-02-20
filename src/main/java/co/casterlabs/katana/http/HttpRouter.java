@@ -13,7 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Reason;
 import co.casterlabs.katana.Util;
-import co.casterlabs.katana.config.ServerConfiguration;
+import co.casterlabs.katana.config.HttpServerConfiguration;
 import co.casterlabs.katana.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.DataSize;
 import co.casterlabs.rakurai.io.IOUtil;
@@ -44,7 +44,7 @@ public class HttpRouter implements HttpListener {
     private List<Reason> failReasons = new ArrayList<>();
     private boolean keepErrorStatus = true;
     private boolean allowInsecure = true;
-    private ServerConfiguration config;
+    private HttpServerConfiguration config;
     private boolean forceHttps = false;
     private FastLogger logger;
     private Katana katana;
@@ -73,7 +73,7 @@ public class HttpRouter implements HttpListener {
         return ReflectionLib.getValue(server, "logger");
     }
 
-    public HttpRouter(ServerConfiguration config, Katana katana) throws IOException {
+    public HttpRouter(HttpServerConfiguration config, Katana katana) throws IOException {
         this.logger = new FastLogger(String.format("HttpServer (%s)", config.getName()));
         this.katana = katana;
         this.config = config;
@@ -89,7 +89,7 @@ public class HttpRouter implements HttpListener {
 
         this.serverLoggers.add(getLoggerFromServer(this.server));
 
-        ServerConfiguration.SSLConfiguration ssl = this.config.getSSL();
+        HttpServerConfiguration.SSLConfiguration ssl = this.config.getSSL();
         if ((ssl != null) && ssl.enabled) {
             try {
                 File keystore = new File(ssl.keystore);
@@ -119,7 +119,7 @@ public class HttpRouter implements HttpListener {
         this.loadConfig(this.config);
     }
 
-    public void loadConfig(ServerConfiguration config) {
+    public void loadConfig(HttpServerConfiguration config) {
         this.config = config;
 
         this.hostnames.clear();
@@ -223,7 +223,7 @@ public class HttpRouter implements HttpListener {
                 String referer = split[1].split("/")[0]; // Strip protocol and uri
 
                 for (HttpServlet servlet : servlets) {
-                    if (Util.regexContains(servlet.getAllowedHosts(), referer)) {
+                    if (Util.regexContains(servlet.getCorsAllowedHosts(), referer)) {
                         response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
                         response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
                         response.putHeader("Access-Control-Allow-Headers", "Authorization, *");

@@ -17,14 +17,16 @@ import lombok.Setter;
 
 @Getter
 public abstract class HttpServlet {
-    private List<String> allowedHosts = new ArrayList<>();
+    private List<String> corsAllowedHosts = new ArrayList<>();
     private List<String> hosts = new ArrayList<>();
     private @Setter int priority = 1;
-    private String id;
+    private String type;
 
-    public HttpServlet(@NonNull String id) {
-        this.id = id;
+    public HttpServlet(@NonNull String type) {
+        this.type = type;
     }
+
+    public abstract Object getConfig();
 
     public abstract void init(JsonObject config) throws JsonValidationException, JsonParseException;
 

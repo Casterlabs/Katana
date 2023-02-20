@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
-import co.casterlabs.katana.config.ServerConfiguration;
+import co.casterlabs.katana.config.HttpServerConfiguration;
 import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.katana.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.json.Rson;
@@ -58,7 +58,7 @@ public class Katana {
     public void init(JsonArray configurations) {
         for (JsonElement element : configurations) {
             try {
-                ServerConfiguration config = Rson.DEFAULT.fromJson(element, ServerConfiguration.class);
+                HttpServerConfiguration config = Rson.DEFAULT.fromJson(element, HttpServerConfiguration.class);
 
                 this.addConfiguration(config);
             } catch (Exception e) {
@@ -67,7 +67,7 @@ public class Katana {
         }
     }
 
-    public void addConfiguration(ServerConfiguration config) throws Exception {
+    public void addConfiguration(HttpServerConfiguration config) throws Exception {
         if (this.routers.containsKey(config.getName())) {
             this.routers.get(config.getName()).loadConfig(config);
         } else {
