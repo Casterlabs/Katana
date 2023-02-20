@@ -79,6 +79,7 @@ public class Katana {
         this.servlets.put(type.toUpperCase(), servlet);
     }
 
+    @SuppressWarnings("deprecation")
     public HttpServlet getServlet(String type) {
         Class<? extends HttpServlet> servlet = this.servlets.get(type.toUpperCase());
 
@@ -95,22 +96,22 @@ public class Katana {
 
     public void start() {
         for (HttpRouter server : this.routers.values()) {
-            if (!server.isRunning()) {
-                server.start();
+            if (server.isRunning()) continue;
 
-                List<Reason> reasons = server.getFailReasons();
+            server.start();
 
-                if (reasons.size() != 0) {
-                    this.logger.severe("Server %s failed to start for the following reason(s)", server.getConfig().getName());
+            List<Reason> reasons = server.getFailReasons();
 
-                    for (Reason reason : reasons) {
-                        reason.print(this.logger);
-                    }
+            if (reasons.size() != 0) {
+                this.logger.severe("Server %s failed to start for the following reason(s)", server.getConfig().getName());
 
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException e) {}
+                for (Reason reason : reasons) {
+                    reason.print(this.logger);
                 }
+
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {}
             }
         }
     }

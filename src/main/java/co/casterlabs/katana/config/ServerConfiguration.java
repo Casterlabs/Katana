@@ -111,13 +111,13 @@ public class ServerConfiguration {
         public boolean enabled = false;
 
         public TLSVersion[] tls = TLSVersion.values();
-        public String[] enabled_cipher_suites = null; // Null = All Available
-        public boolean allow_insecure = true;
+        public String[] enabledCipherSuites = null; // Null = All Available
+        public boolean allowInsecure = true;
         public boolean force = false;
-        public int dh_size = 2048;
+        public int dhSize = 2048;
         public int port = 443;
 
-        public String keystore_password = "";
+        public String keystorePassword = "";
         public String keystore = "";
 
     }
