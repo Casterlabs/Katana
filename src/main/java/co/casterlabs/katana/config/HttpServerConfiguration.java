@@ -38,7 +38,7 @@ public class HttpServerConfiguration {
     @JsonField("debug_mode")
     private boolean debugMode;
 
-    private File logsDir;
+    private File logsDir = new File("./logs");
 
     @JsonField("ssl")
     private SSLConfiguration SSL = new SSLConfiguration();
