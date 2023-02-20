@@ -1,7 +1,6 @@
 package co.casterlabs.katana;
 
 import java.io.File;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
@@ -9,8 +8,8 @@ import co.casterlabs.katana.http.servlets.FileServlet;
 import co.casterlabs.katana.http.servlets.ProxyServlet;
 import co.casterlabs.katana.http.servlets.RedirectServlet;
 import co.casterlabs.katana.http.servlets.StaticServlet;
-import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.element.JsonArray;
+import co.casterlabs.rakurai.json.element.JsonObject;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import picocli.CommandLine;
@@ -51,10 +50,10 @@ public class Launcher implements Runnable {
 
         Katana katana = new Katana(this);
 
-        katana.addServlet("STATIC", StaticServlet.class);
-        katana.addServlet("PROXY", ProxyServlet.class);
-        katana.addServlet("REDIRECT", RedirectServlet.class);
-        katana.addServlet("FILE", FileServlet.class);
+        katana.addHttpServlet("STATIC", StaticServlet.class);
+        katana.addHttpServlet("PROXY", ProxyServlet.class);
+        katana.addHttpServlet("REDIRECT", RedirectServlet.class);
+        katana.addHttpServlet("FILE", FileServlet.class);
 
         this.loadConfig(katana);
 
@@ -65,20 +64,14 @@ public class Launcher implements Runnable {
     public void loadConfig(Katana katana) {
         JsonArray json;
 
-        if (!this.file.exists()) {
-            InputStream in = this.getClass().getResourceAsStream("/config.json");
-            byte[] bytes = new byte[in.available()];
-
-            in.read(bytes);
-
-            Files.write(this.file.toPath(), bytes);
-
-            json = Rson.DEFAULT.fromJson(new String(bytes, StandardCharsets.UTF_8), JsonArray.class);
-        } else {
+        if (this.file.exists()) {
             json = Util.readFileAsJson(this.file, JsonArray.class);
+        } else {
+            json = JsonArray.of(JsonObject.singleton("type", "http")); // Populate a default.
         }
 
-        katana.init(json);
+        String newConfigJson = katana.init(json);
+        Files.write(this.file.toPath(), newConfigJson.getBytes(StandardCharsets.UTF_8));
     }
 
 }

@@ -66,7 +66,7 @@ public class HttpServerConfiguration {
             JsonObject config = e.getAsObject();
             String type = config.getString("type");
 
-            HttpServlet servlet = Katana.getInstance().getServlet(type);
+            HttpServlet servlet = Katana.getInstance().getHttpServlet(type);
 
             // Deprecated stuff.
             if (servlet.getClass().isAnnotationPresent(Deprecated.class)) {

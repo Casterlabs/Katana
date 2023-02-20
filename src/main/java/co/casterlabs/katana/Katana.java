@@ -11,6 +11,7 @@ import co.casterlabs.katana.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import co.casterlabs.rakurai.json.element.JsonElement;
+import co.casterlabs.rakurai.json.element.JsonObject;
 import lombok.Getter;
 import xyz.e3ndr.consolidate.CommandRegistry;
 import xyz.e3ndr.consolidate.exception.ArgumentsLengthException;
@@ -55,19 +56,38 @@ public class Katana {
         }).start();
     }
 
-    public void init(JsonArray configurations) {
-        for (JsonElement element : configurations) {
-            try {
-                HttpServerConfiguration config = Rson.DEFAULT.fromJson(element, HttpServerConfiguration.class);
+    public String init(JsonArray configurations) {
+        JsonArray updatedResult = new JsonArray(); // We want to populate defaults by reserializing the classes.
 
-                this.addConfiguration(config);
-            } catch (Exception e) {
-                this.logger.severe("An exception occurred whilst loading config:\n%s", e);
+        for (JsonElement element : configurations) {
+            JsonObject configElement = element.getAsObject();
+
+            String type = "http"; // default.
+            if (configElement.containsKey("type")) {
+                type = configElement.getString("type").toLowerCase();
+            }
+
+            switch (type) {
+                case HttpServerConfiguration.TYPE: {
+                    try {
+                        HttpServerConfiguration config = Rson.DEFAULT.fromJson(configElement, HttpServerConfiguration.class);
+                        updatedResult.add(Rson.DEFAULT.toJson(config));
+
+                        this.addHttpConfiguration(config);
+                    } catch (Exception e) {
+                        this.logger.severe("An exception occurred whilst loading config:\n%s", e);
+                    }
+                    break;
+                }
+
+                // TODO others ;)
             }
         }
+
+        return updatedResult.toString(true);
     }
 
-    public void addConfiguration(HttpServerConfiguration config) throws Exception {
+    public void addHttpConfiguration(HttpServerConfiguration config) throws Exception {
         if (this.routers.containsKey(config.getName())) {
             this.routers.get(config.getName()).loadConfig(config);
         } else {
@@ -75,12 +95,12 @@ public class Katana {
         }
     }
 
-    public void addServlet(String type, Class<? extends HttpServlet> servlet) {
+    public void addHttpServlet(String type, Class<? extends HttpServlet> servlet) {
         this.servlets.put(type.toUpperCase(), servlet);
     }
 
     @SuppressWarnings("deprecation")
-    public HttpServlet getServlet(String type) {
+    public HttpServlet getHttpServlet(String type) {
         Class<? extends HttpServlet> servlet = this.servlets.get(type.toUpperCase());
 
         if (servlet == null) {
