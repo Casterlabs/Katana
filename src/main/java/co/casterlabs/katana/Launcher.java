@@ -72,6 +72,8 @@ public class Launcher implements Runnable {
 
         String newConfigJson = katana.init(json);
         Files.write(this.file.toPath(), newConfigJson.getBytes(StandardCharsets.UTF_8));
+
+        Katana.getInstance().getLogger().info("Updated config.");
     }
 
 }

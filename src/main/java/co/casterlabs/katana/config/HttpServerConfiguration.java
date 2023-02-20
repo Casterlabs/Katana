@@ -15,6 +15,7 @@ import co.casterlabs.rakurai.json.annotating.JsonField;
 import co.casterlabs.rakurai.json.annotating.JsonSerializationMethod;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import co.casterlabs.rakurai.json.element.JsonElement;
+import co.casterlabs.rakurai.json.element.JsonNull;
 import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.element.JsonString;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
@@ -57,6 +58,7 @@ public class HttpServerConfiguration {
 
     @JsonSerializationMethod("logs_dir")
     private JsonElement $serialize_logs_dir() {
+        if (this.logsDir == null) return JsonNull.INSTANCE;
         return new JsonString(this.logsDir.toString());
     }
 
