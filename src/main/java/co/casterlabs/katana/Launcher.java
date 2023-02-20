@@ -30,7 +30,7 @@ public class Launcher implements Runnable {
     private File file = new File("config.json");
 
     @Option(names = {
-            "-trace",
+            "-t",
             "--trace"
     }, description = "Forcefully enables trace logging across all of the servers.")
     private boolean trace = false;
@@ -67,7 +67,7 @@ public class Launcher implements Runnable {
         if (this.file.exists()) {
             json = Util.readFileAsJson(this.file, JsonArray.class);
         } else {
-            json = JsonArray.of(JsonObject.singleton("type", "http")); // Populate a default.
+            json = JsonArray.of(JsonObject.singleton("type", "http")); // Auto populate a default.
         }
 
         String newConfigJson = katana.init(json);
