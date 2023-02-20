@@ -11,6 +11,7 @@ import co.casterlabs.rakurai.io.http.TLSVersion;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.annotating.JsonDeserializationMethod;
+import co.casterlabs.rakurai.json.annotating.JsonExclude;
 import co.casterlabs.rakurai.json.annotating.JsonField;
 import co.casterlabs.rakurai.json.annotating.JsonSerializationMethod;
 import co.casterlabs.rakurai.json.element.JsonArray;
@@ -42,7 +43,7 @@ public class HttpServerConfiguration {
     @JsonField("ssl")
     private SSLConfiguration SSL = new SSLConfiguration();
 
-    private List<HttpServlet> servlets = new ArrayList<>();
+    private @JsonExclude List<HttpServlet> servlets = new ArrayList<>();
 
     @JsonSerializationMethod("type")
     private JsonElement $serialize_type() {
@@ -63,8 +64,13 @@ public class HttpServerConfiguration {
     }
 
     @JsonDeserializationMethod("hosts")
-    private void $deserialize_hosts(JsonElement hosts) throws JsonValidationException, JsonParseException {
-        for (JsonElement e : hosts.getAsArray()) {
+    private void $deserialize_hosts(JsonElement e) throws JsonValidationException, JsonParseException {
+        this.$deserialize_servlets(e); // TODO Deprecated.
+    }
+
+    @JsonDeserializationMethod("servlets")
+    private void $deserialize_servlets(JsonElement servlets) throws JsonValidationException, JsonParseException {
+        for (JsonElement e : servlets.getAsArray()) {
             JsonObject config = e.getAsObject();
             String type = config.getString("type");
 
@@ -131,8 +137,8 @@ public class HttpServerConfiguration {
         });
     }
 
-    @JsonSerializationMethod("hosts")
-    private JsonElement $serialize_hosts() {
+    @JsonSerializationMethod("servlets")
+    private JsonElement $serialize_servlets() {
         JsonArray arr = new JsonArray();
 
         for (HttpServlet servlet : this.servlets) {
