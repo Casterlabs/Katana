@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.MultiValuedMap;
 import org.jetbrains.annotations.Nullable;
@@ -19,6 +20,7 @@ import co.casterlabs.rakurai.io.http.HttpStatus;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import co.casterlabs.rakurai.json.element.JsonElement;
+import lombok.NonNull;
 
 public class Util {
 
@@ -90,6 +92,13 @@ public class Util {
         byte[] bytes = Files.readAllBytes(file.toPath());
 
         return Rson.DEFAULT.fromJson(new String(bytes, StandardCharsets.UTF_8), clazz);
+    }
+
+    public static String escapeHtml(@NonNull String str) {
+        return str
+            .codePoints()
+            .mapToObj(c -> c > 127 || "\"'<>&".indexOf(c) != -1 ? "&#" + c + ";" : new String(Character.toChars(c)))
+            .collect(Collectors.joining());
     }
 
 }

@@ -1,5 +1,6 @@
 package co.casterlabs.katana.http.servlets;
 
+import co.casterlabs.katana.Util;
 import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpSession;
@@ -44,15 +45,17 @@ public class RedirectServlet extends HttpServlet {
     @SneakyThrows
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
-        HttpResponse response = HttpResponse.newFixedLengthResponse(StandardHttpStatus.TEMPORARY_REDIRECT, new byte[0]);
+        String redirectUrl = this.config.redirectUrl;
+        if (this.config.includePath) redirectUrl += session.getUri();
 
-        if (this.config.includePath) {
-            response.putHeader("location", this.config.redirectUrl + session.getUri());
-        } else {
-            response.putHeader("location", this.config.redirectUrl);
-        }
+        String escaped_redirectUrl = Util.escapeHtml(redirectUrl);
 
-        return response;
+        return HttpResponse.newFixedLengthResponse(
+            StandardHttpStatus.TEMPORARY_REDIRECT,
+            "<!DOCTYPE html><html><a href=\"" + escaped_redirectUrl + "\">" + escaped_redirectUrl + "</a></html>"
+        )
+            .putHeader("Location", redirectUrl)
+            .setMimeType("text/html");
     }
 
 }

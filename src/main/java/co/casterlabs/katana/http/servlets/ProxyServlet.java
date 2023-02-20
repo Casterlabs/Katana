@@ -2,6 +2,7 @@ package co.casterlabs.katana.http.servlets;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
@@ -13,8 +14,11 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 
 import co.casterlabs.katana.http.HttpRouter;
+import co.casterlabs.rakurai.DataSize;
+import co.casterlabs.rakurai.io.IOUtil;
 import co.casterlabs.rakurai.io.http.DropConnectionException;
 import co.casterlabs.rakurai.io.http.HttpResponse;
+import co.casterlabs.rakurai.io.http.HttpResponse.ResponseContent;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
 import co.casterlabs.rakurai.io.http.websocket.Websocket;
@@ -150,8 +154,6 @@ public class ProxyServlet extends HttpServlet {
         }
 
         if (this.config.forwardIp) {
-            builder.addHeader("X-Remote-IP", session.getRemoteIpAddress()); // Deprecated
-            builder.addHeader("X-Katana-IP", session.getRemoteIpAddress()); // Deprecated
             builder.addHeader("X-Forwarded-For", String.join(", ", session.getRequestHops()));
         }
 
@@ -160,30 +162,54 @@ public class ProxyServlet extends HttpServlet {
         Response response = client.newCall(request).execute();
 
         try {
-            HttpStatus status = new HttpStatusAdapter(response.code());
-            long responseLen = Long.parseLong(response.header("Content-Length"));
+            HttpStatus status = new HttpStatusAdapter(response.code(), response.message());
+            long responseLen = Long.parseLong(response.header("Content-Length", "-1"));
             InputStream responseStream = response.body().byteStream();
 
-            //@formatter:off
-            HttpResponse result = (responseLen == -1) ?
-                    HttpResponse.newChunkedResponse(status, responseStream) : 
-                    HttpResponse.newFixedLengthResponse(status, responseStream, responseLen); // Ugh.
-            //@formatter:on
+            HttpResponse result = new HttpResponse(
+                new ResponseContent() {
+                    @Override
+                    public void write(OutputStream out) throws IOException {
+                        // Automatically uses the content length or 16MB for the IO buffer, whichever is
+                        // smallest.
+                        IOUtil.writeInputStreamToOutputStream(
+                            responseStream,
+                            out,
+                            responseLen,
+                            (int) DataSize.MEGABYTE.toBytes(16)
+                        );
+                    }
+
+                    @Override
+                    public long getLength() {
+                        return responseLen;
+                    }
+
+                    @Override
+                    public void close() throws IOException {
+                        response.close();
+                    }
+                },
+                status
+            )
+                .setMimeType(response.header("Content-Type", "application/octet-stream"));
 
             for (Pair<? extends String, ? extends String> header : response.headers()) {
                 String key = header.getFirst();
 
-                if (!key.equalsIgnoreCase("Transfer-Encoding") && !key.equalsIgnoreCase("Content-Length") && !key.equalsIgnoreCase("Content-Type")) {
-                    result.putHeader(key, header.getSecond());
+                if (key.equalsIgnoreCase("Transfer-Encoding") ||
+                    key.equalsIgnoreCase("Content-Length") ||
+                    key.equalsIgnoreCase("Content-Type")) {
+                    continue;
                 }
+
+                result.putHeader(key, header.getSecond());
             }
 
-            result.setMimeType(response.header("Content-Type", "application/octet-stream"));
-
-            return result; // We don't want to close it.
+            return result;
         } catch (Exception e) {
             e.printStackTrace();
-            response.close();
+            IOUtil.safeClose(response);
             return null;
         }
     }
@@ -302,15 +328,16 @@ public class ProxyServlet extends HttpServlet {
     @AllArgsConstructor
     private static class HttpStatusAdapter implements HttpStatus {
         private int code;
+        private String description;
 
         @Override
         public String getStatusString() {
-            return String.valueOf(this.code);
+            return String.format("%d %s", this.code, this.description);
         }
 
         @Override
         public String getDescription() {
-            return "";
+            return this.description;
         }
 
         @Override
