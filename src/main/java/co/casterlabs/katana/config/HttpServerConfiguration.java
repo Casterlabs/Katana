@@ -24,6 +24,8 @@ import lombok.Getter;
 @Getter
 @JsonClass(exposeAll = true)
 public class HttpServerConfiguration {
+    public static final String TYPE = "http";
+
     private String name = "www";
 
     private int port = 80;
@@ -40,6 +42,11 @@ public class HttpServerConfiguration {
     private SSLConfiguration SSL = new SSLConfiguration();
 
     private List<HttpServlet> servlets = new ArrayList<>();
+
+    @JsonSerializationMethod("type")
+    private JsonElement $serialize_type() {
+        return new JsonString(TYPE);
+    }
 
     @JsonDeserializationMethod("logs_dir")
     private void $deserialize_logs_dir(JsonElement dir) {
