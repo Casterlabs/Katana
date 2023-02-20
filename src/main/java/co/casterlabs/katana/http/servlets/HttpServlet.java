@@ -1,7 +1,7 @@
 package co.casterlabs.katana.http.servlets;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.HttpResponse;
@@ -17,8 +17,8 @@ import lombok.Setter;
 
 @Getter
 public abstract class HttpServlet {
-    private List<String> corsAllowedHosts = new ArrayList<>();
-    private List<String> hosts = new ArrayList<>();
+    private Set<String> corsAllowedHosts = new HashSet<>();
+    private Set<String> hostnames = new HashSet<>();
     private @Setter int priority = 1;
     private String type;
 

@@ -125,7 +125,7 @@ public class HttpRouter implements HttpListener {
         this.hostnames.clear();
 
         for (HttpServlet servlet : this.config.getServlets()) {
-            for (String host : servlet.getHosts()) {
+            for (String host : servlet.getHostnames()) {
                 String regex = host.toLowerCase().replace(".", "\\.").replace("*", ".*");
 
                 this.hostnames.put(regex, servlet);

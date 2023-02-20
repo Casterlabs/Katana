@@ -38,7 +38,7 @@ public class HttpServerConfiguration {
     @JsonField("debug_mode")
     private boolean debugMode;
 
-    private File logsDir = new File("./logs");
+    private @JsonExclude File logsDir;
 
     @JsonField("ssl")
     private SSLConfiguration SSL = new SSLConfiguration();
@@ -84,7 +84,7 @@ public class HttpServerConfiguration {
             if (config.containsKey("hostname")) {
                 String hostname = config.getString("hostname");
 
-                servlet.getHosts().add(hostname);
+                servlet.getHostnames().add(hostname);
                 servlet.getCorsAllowedHosts().add(
                     hostname
                         .replace(".", "\\.")
@@ -109,7 +109,7 @@ public class HttpServerConfiguration {
                 for (JsonElement h_e : config.getArray("hostnames")) {
                     String hostname = h_e.getAsString();
 
-                    servlet.getHosts().add(hostname);
+                    servlet.getHostnames().add(hostname);
                     servlet.getCorsAllowedHosts().add(
                         hostname
                             .replace(".", "\\.")
@@ -142,15 +142,35 @@ public class HttpServerConfiguration {
         JsonArray arr = new JsonArray();
 
         for (HttpServlet servlet : this.servlets) {
+            // We need to convert from the internal format BACK to the user format.
+            JsonArray hostnames = new JsonArray();
+            for (String hostname : servlet.getHostnames()) {
+                hostnames.add(
+                    hostname
+                        .replace(".*", "*")
+                        .replace("\\.", ".")
+                );
+            }
+
+            // We need to convert from the internal format BACK to the user format.
+            JsonArray corsAllowedHosts = new JsonArray();
+            for (String hostname : servlet.getCorsAllowedHosts()) {
+                corsAllowedHosts.add(
+                    hostname
+                        .replace(".*", "*")
+                        .replace("\\.", ".")
+                );
+            }
+
             JsonObject asObject = new JsonObject()
                 .put("type", servlet.getType().toLowerCase())
                 .put("priority", servlet.getPriority())
-                .put("hostnames", Rson.DEFAULT.toJson(servlet.getHosts()))
-                .put("cors_allowed_hosts", Rson.DEFAULT.toJson(servlet.getCorsAllowedHosts()));
+                .put("hostnames", hostnames)
+                .put("cors_allowed_hosts", corsAllowedHosts);
 
             // Copy the config in.
             JsonObject config = (JsonObject) Rson.DEFAULT.toJson(servlet.getConfig());
-            asObject.toMap().putAll(config.toMap());
+            config.entrySet().forEach((e) -> asObject.put(e.getKey(), e.getValue()));
 
             arr.add(asObject);
         }
