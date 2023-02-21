@@ -22,7 +22,7 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 @Getter
 public class Katana {
     public static final String ERROR_HTML = "<!DOCTYPE html><html><head><title>$RESPONSECODE</title></head><body><h1>$RESPONSECODE</h1><p>$DESCRIPTION</p><br/><p><i>Running Casterlabs Katana, $ADDRESS</i></p></body></html>";
-    public static final String VERSION = "1.19.0";
+    public static final String VERSION = "1.19.1";
     public static final String SERVER_DECLARATION = String.format("Katana/%s (%s)", Katana.VERSION, System.getProperty("os.name", "Generic"));
 
     private Map<String, Class<? extends HttpServlet>> servlets = new HashMap<>();
