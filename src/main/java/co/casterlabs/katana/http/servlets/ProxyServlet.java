@@ -120,10 +120,10 @@ public class ProxyServlet extends HttpServlet {
 
         String url = this.config.proxyUrl;
 
-        if (this.config.proxyPath == null) {
-            url += session.getUri();
-        } else if (this.config.includePath) {
-            if (this.config.proxyPath != null) {
+        if (this.config.includePath) {
+            if (this.config.proxyPath == null) {
+                url += session.getUri();
+            } else {
                 url += session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
             }
 
