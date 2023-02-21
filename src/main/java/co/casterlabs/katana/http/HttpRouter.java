@@ -162,8 +162,14 @@ public class HttpRouter implements HttpListener {
 
     @SneakyThrows
     public void stop() {
-        if (this.serverSecure != null) this.serverSecure.stop();
-        if (this.server != null) this.server.stop();
+        if (this.serverSecure != null) {
+            this.serverSecure.stop();
+            this.logger.info("Stopped secure server on port %d.", this.serverSecure.getPort());
+        }
+        if (this.server != null) {
+            this.server.stop();
+            this.logger.info("Stopped server on port %d.", this.server.getPort());
+        }
     }
 
     // Interacts with servlets
