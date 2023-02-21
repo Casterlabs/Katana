@@ -6,9 +6,15 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map.Entry;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -64,17 +70,43 @@ public class ProxyServlet extends HttpServlet {
         "x-katana-ip"
     );
 
-    private static final OkHttpClient client = new OkHttpClient();
-
     private @Getter HostConfiguration config;
+    private OkHttpClient client;
 
     public ProxyServlet() {
         super("PROXY");
     }
 
+    @SneakyThrows
     @Override
     public void init(JsonObject config) throws JsonValidationException, JsonParseException {
         this.config = Rson.DEFAULT.fromJson(config, HostConfiguration.class);
+
+        OkHttpClient.Builder okhttpBuilder = new OkHttpClient.Builder();
+        if (this.config.ignoreBadSsl) {
+            // https://www.baeldung.com/okhttp-client-trust-all-certificates
+            TrustManager[] trustAllCerts = new TrustManager[] {
+                    new X509TrustManager() {
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+
+                        @Override
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return new X509Certificate[] {};
+                        }
+                    }
+            };
+
+            SSLContext sslContext = SSLContext.getInstance("SSL");
+            sslContext.init(null, trustAllCerts, new SecureRandom());
+
+            okhttpBuilder.sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) trustAllCerts[0]);
+            okhttpBuilder.hostnameVerifier((hostname, session) -> true);
+        }
+        this.client = okhttpBuilder.build();
     }
 
     @JsonClass(exposeAll = true)
@@ -96,6 +128,9 @@ public class ProxyServlet extends HttpServlet {
 
         @JsonField("allow_websockets")
         public boolean allowWebsockets;
+
+        @JsonField("ignore_bad_ssl")
+        public boolean ignoreBadSsl = false;
 
         @JsonValidate
         private void $validate() {
