@@ -233,7 +233,7 @@ public class HttpRouter implements HttpListener {
                         response.putHeader("Access-Control-Allow-Origin", protocol + "://" + referer);
                         response.putHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
                         response.putHeader("Access-Control-Allow-Headers", "Authorization, *");
-                        session.getLogger().info("Added CORS declaration.");
+                        session.getLogger().debug("Added CORS declaration.");
                         break;
                     }
                 }
