@@ -306,18 +306,30 @@ public class ProxyServlet extends HttpServlet {
             .replace("https://", "wss://") // Remap http urls to websocket.
             .replace("http://", "ws://");
 
+//        if (this.config.forwardHost) {
+//            // Replace the proxyUrl's host with the session's host. Look at the above DNS
+//            // logic to see what this does.
+//            url = url.replaceFirst(this.proxyUrlHost, session.getHost());
+//            session.getLogger().debug("Rewrote %s to %s, keep this in mind for the following messages.", this.proxyUrlHost, session.getHost());
+//        }
+
         if (this.config.includePath) {
+            String append;
+
             if (this.config.proxyPath == null) {
-                url += session.getUri();
+                append = session.getUri();
             } else {
-                url += session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
+                append = session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
             }
 
+            session.getLogger().debug("%s -> %s%s%s", url, url, append, session.getQueryString());
+            url += append;
             url += session.getQueryString();
         }
 
         try {
             URI uri = new URI(url);
+        session.getLogger().debug("Final proxy url: %s", url);
 
             return new WebsocketListener() {
                 private RemoteWebSocketConnection remote;
