@@ -18,6 +18,7 @@ import javax.net.ssl.X509TrustManager;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
+import org.jetbrains.annotations.Nullable;
 
 import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.DataSize;
@@ -42,6 +43,8 @@ import kotlin.Pair;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
+import okhttp3.Dns;
+import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -71,7 +74,9 @@ public class ProxyServlet extends HttpServlet {
     );
 
     private @Getter HostConfiguration config;
+
     private OkHttpClient client;
+    private @Nullable String proxyUrlHost;
 
     public ProxyServlet() {
         super("PROXY");
@@ -83,6 +88,7 @@ public class ProxyServlet extends HttpServlet {
         this.config = Rson.DEFAULT.fromJson(config, HostConfiguration.class);
 
         OkHttpClient.Builder okhttpBuilder = new OkHttpClient.Builder();
+
         if (this.config.ignoreBadSsl) {
             // https://www.baeldung.com/okhttp-client-trust-all-certificates
             TrustManager[] trustAllCerts = new TrustManager[] {
@@ -106,6 +112,18 @@ public class ProxyServlet extends HttpServlet {
             okhttpBuilder.sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) trustAllCerts[0]);
             okhttpBuilder.hostnameVerifier((hostname, session) -> true);
         }
+
+        if (this.config.forwardHost) {
+            this.proxyUrlHost = HttpUrl
+                .parse(this.config.proxyUrl)
+                .host();
+
+            // We intercept hostname lookups and give the result for the proxyUrl's host.
+            okhttpBuilder.dns((hostname) -> {
+                return Dns.SYSTEM.lookup(this.proxyUrlHost);
+            });
+        }
+
         this.client = okhttpBuilder.build();
     }
 
@@ -132,6 +150,8 @@ public class ProxyServlet extends HttpServlet {
         @JsonField("ignore_bad_ssl")
         public boolean ignoreBadSsl = false;
 
+        @JsonField("forward_host")
+        public boolean forwardHost = false;
         @JsonValidate
         private void $validate() {
             assert this.proxyUrl != null : "The `proxy_url` option must be set.";
@@ -155,17 +175,29 @@ public class ProxyServlet extends HttpServlet {
 
         String url = this.config.proxyUrl;
 
+        if (this.config.forwardHost) {
+            // Replace the proxyUrl's host with the session's host. Look at the above DNS
+            // logic to see what this does.
+            url = url.replaceFirst(this.proxyUrlHost, session.getHost());
+            session.getLogger().debug("Rewrote %s to %s, keep this in mind for the following messages.", this.proxyUrlHost, session.getHost());
+        }
+
         if (this.config.includePath) {
+            String append;
+
             if (this.config.proxyPath == null) {
-                url += session.getUri();
+                append = session.getUri();
             } else {
-                url += session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
+                append = session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
             }
 
+            session.getLogger().debug("%s -> %s%s%s", url, url, append, session.getQueryString());
+            url += append;
             url += session.getQueryString();
         }
 
         Request.Builder builder = new Request.Builder().url(url);
+        session.getLogger().debug("Final proxy url: %s", url);
 
         try {
             // If it throws then we have no body.
