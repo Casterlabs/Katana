@@ -124,6 +124,8 @@ public class ProxyServlet extends HttpServlet {
             });
         }
 
+        okhttpBuilder.followRedirects(this.config.followRedirects);
+
         this.client = okhttpBuilder.build();
     }
 
@@ -152,6 +154,10 @@ public class ProxyServlet extends HttpServlet {
 
         @JsonField("forward_host")
         public boolean forwardHost = false;
+
+        @JsonField("follow_redirects")
+        public boolean followRedirects = false;
+
         @JsonValidate
         private void $validate() {
             assert this.proxyUrl != null : "The `proxy_url` option must be set.";
