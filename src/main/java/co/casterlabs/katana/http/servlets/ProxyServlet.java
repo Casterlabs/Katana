@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
@@ -327,54 +326,49 @@ public class ProxyServlet extends HttpServlet {
             url += session.getQueryString();
         }
 
-        try {
-            URI uri = new URI(url);
         session.getLogger().debug("Final proxy url: %s", url);
+        URI uri = URI.create(url);
 
-            return new WebsocketListener() {
-                private RemoteWebSocketConnection remote;
+        return new WebsocketListener() {
+            private RemoteWebSocketConnection remote;
 
-                @Override
-                public void onOpen(Websocket websocket) {
-                    this.remote = new RemoteWebSocketConnection(uri, websocket);
+            @Override
+            public void onOpen(Websocket websocket) {
+                this.remote = new RemoteWebSocketConnection(uri, websocket);
 
-                    for (Entry<String, List<String>> entry : session.getHeaders().entrySet()) {
-                        this.remote.addHeader(entry.getKey(), entry.getValue().get(0));
+                for (Entry<String, List<String>> entry : session.getHeaders().entrySet()) {
+                    this.remote.addHeader(entry.getKey(), entry.getValue().get(0));
+                }
+
+                try {
+                    if (!this.remote.connectBlocking()) {
+                        websocket.close(WebsocketCloseCode.NORMAL);
                     }
-
+                } catch (IOException | InterruptedException e) {
                     try {
-                        if (!this.remote.connectBlocking()) {
-                            websocket.close(WebsocketCloseCode.NORMAL);
-                        }
-                    } catch (IOException | InterruptedException e) {
-                        try {
-                            websocket.close(WebsocketCloseCode.NORMAL);
-                        } catch (IOException ignored) {}
-                    }
+                        websocket.close(WebsocketCloseCode.NORMAL);
+                    } catch (IOException ignored) {}
                 }
+            }
 
-                @Override
-                public void onText(Websocket websocket, String message) {
-                    this.remote.send(message);
+            @Override
+            public void onText(Websocket websocket, String message) {
+                this.remote.send(message);
+            }
+
+            @Override
+            public void onBinary(Websocket websocket, byte[] bytes) {
+                this.remote.send(bytes);
+            }
+
+            @Override
+            public void onClose(Websocket websocket) {
+                if (!this.remote.isClosing()) {
+                    this.remote.close();
                 }
+            }
 
-                @Override
-                public void onBinary(Websocket websocket, byte[] bytes) {
-                    this.remote.send(bytes);
-                }
-
-                @Override
-                public void onClose(Websocket websocket) {
-                    if (!this.remote.isClosing()) {
-                        this.remote.close();
-                    }
-                }
-
-            };
-        } catch (URISyntaxException e) {
-            session.getLogger().fatal("A fatal error occurred whilst building the proxy url:\n%s", e);
-            throw new DropConnectionException();
-        }
+        };
     }
 
     private static class RemoteWebSocketConnection extends WebSocketClient {
@@ -387,7 +381,9 @@ public class ProxyServlet extends HttpServlet {
         }
 
         @Override
-        public void onOpen(ServerHandshake handshakedata) {}
+        public void onOpen(ServerHandshake handshakedata) {
+            this.client.getSession().getLogger().debug("Handshake data: %s", handshakedata);
+        }
 
         @Override
         public void onMessage(String message) {
@@ -405,6 +401,7 @@ public class ProxyServlet extends HttpServlet {
 
         @Override
         public void onClose(int code, String reason, boolean remote) {
+            this.client.getSession().getLogger().debug("Proxy's close reason: %d %s", code, reason);
             try {
                 this.client.close(WebsocketCloseCode.NORMAL);
             } catch (IOException e) {}
