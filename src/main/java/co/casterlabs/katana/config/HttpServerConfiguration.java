@@ -186,7 +186,14 @@ public class HttpServerConfiguration {
 
         public TLSVersion[] tls = TLSVersion.values();
         @JsonField("enabled_cipher_suites")
-        public String[] enabledCipherSuites = null; // Null = All Available
+        public String[] enabledCipherSuites = {
+                "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+                "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256",
+                "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384"
+        }; // Null = All Available
         @JsonField("dh_size")
         public int dhSize = 2048;
 
