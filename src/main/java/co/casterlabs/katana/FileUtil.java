@@ -38,26 +38,21 @@ public class FileUtil {
 
             if ((range != null) && (startFrom >= 0)) {
                 if (startFrom >= fileLen) {
-                    response = HttpResponse.newFixedLengthResponse(StandardHttpStatus.RANGE_NOT_SATISFIABLE, new byte[0]);
-
-                    response.putHeader("Content-Range", "bytes 0-0/" + fileLen);
-
-                    return response;
+                    response = HttpResponse.newFixedLengthResponse(StandardHttpStatus.RANGE_NOT_SATISFIABLE)
+                        .putHeader("Content-Range", "bytes 0-0/" + fileLen);
                 } else {
                     if (endAt < 0) endAt = fileLen - 1;
                     long newLen = endAt - startFrom + 1;
                     if (newLen < 0) newLen = 0;
                     long dataLen = newLen;
 
-                    response = HttpResponse.newFixedLengthFileResponse(StandardHttpStatus.PARTIAL_CONTENT, file, startFrom, dataLen);
-
-                    response.putHeader("Content-Range", "bytes " + startFrom + "-" + endAt + "/" + fileLen);
+                    response = HttpResponse.newFixedLengthFileResponse(StandardHttpStatus.PARTIAL_CONTENT, file, startFrom, dataLen)
+                        .putHeader("Content-Range", "bytes " + startFrom + "-" + endAt + "/" + fileLen);
                 }
             } else {
                 if ((range != null) && etag.equals(session.getHeader("if-none-match"))) {
-                    response = HttpResponse.newFixedLengthResponse(StandardHttpStatus.RANGE_NOT_SATISFIABLE, new byte[0]);
-
-                    response.putHeader("Content-Range", "bytes 0-0/" + fileLen);
+                    response = HttpResponse.newFixedLengthResponse(StandardHttpStatus.RANGE_NOT_SATISFIABLE)
+                        .putHeader("Content-Range", "bytes 0-0/" + fileLen);
                 } else {
                     response = HttpResponse.newFixedLengthFileResponse(StandardHttpStatus.OK, file);
                 }
@@ -74,20 +69,6 @@ public class FileUtil {
         } catch (IOException e) {
             return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Error while reading file (exists)", null);
         }
-    }
-
-    public static boolean isMiki(File file) {
-        int index = file.getName().lastIndexOf('.');
-
-        if (index > 0) {
-            String extension = file.getName().substring(index + 1);
-
-            if (extension.equalsIgnoreCase("miki")) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     public static File getFile(File directory, String rawUri, boolean requireFileExtensions, List<String> defaultFiles) {
@@ -117,6 +98,20 @@ public class FileUtil {
         return file;
     }
 
+//  public static boolean isMiki(File file) {
+//      int index = file.getName().lastIndexOf('.');
+//
+//      if (index > 0) {
+//          String extension = file.getName().substring(index + 1);
+//
+//          if (extension.equalsIgnoreCase("miki")) {
+//              return true;
+//          }
+//      }
+//
+//      return false;
+//  }
+//
 //    public static HttpResponse serveMiki(HttpSession session, File file, HttpStatus status) {
 //        try {
 //            Map<String, String> headers = new HashMap<>();
