@@ -213,7 +213,7 @@ public class HttpRouter implements HttpListener {
 
     private void handleCors(Collection<HttpServlet> servlets, HttpSession session, HttpResponse response) {
         String originHeader = session.getHeader("Origin");
-        response.putHeader("server", Katana.SERVER_DECLARATION);
+        response.putHeader("Server", Katana.SERVER_DECLARATION);
 
         if (originHeader != null) {
             String[] split = originHeader.split("://");
