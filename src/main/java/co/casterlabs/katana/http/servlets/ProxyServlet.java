@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -353,12 +354,22 @@ public class ProxyServlet extends HttpServlet {
 
             @Override
             public void onText(Websocket websocket, String message) {
-                this.remote.send(message);
+                try {
+                    this.remote.send(message);
+                } catch (Throwable t) {
+                    websocket.getSession().getLogger().fatal("An error occurred whilst sending message to target: %s", t);
+                    throw t;
+                }
             }
 
             @Override
             public void onBinary(Websocket websocket, byte[] bytes) {
-                this.remote.send(bytes);
+                try {
+                    this.remote.send(bytes);
+                } catch (Throwable t) {
+                    websocket.getSession().getLogger().fatal("An error occurred whilst sending message to target: %s", t);
+                    throw t;
+                }
             }
 
             @Override
@@ -367,7 +378,6 @@ public class ProxyServlet extends HttpServlet {
                     this.remote.close();
                 }
             }
-
         };
     }
 
@@ -382,21 +392,27 @@ public class ProxyServlet extends HttpServlet {
 
         @Override
         public void onOpen(ServerHandshake handshakedata) {
-            this.client.getSession().getLogger().debug("Handshake data: %s", handshakedata);
+            List<String> headers = new LinkedList<>();
+            handshakedata.iterateHttpFields().forEachRemaining(headers::add);
+            this.client.getSession().getLogger().debug("Handshake headers: %s", headers);
         }
 
         @Override
         public void onMessage(String message) {
             try {
                 this.client.send(message);
-            } catch (IOException e) {}
+            } catch (Throwable t) {
+                this.client.getSession().getLogger().fatal("An error occurred whilst sending message to client: %s", t);
+            }
         }
 
         @Override
         public void onMessage(ByteBuffer message) {
             try {
                 this.client.send(message.array());
-            } catch (IOException e) {}
+            } catch (Throwable t) {
+                this.client.getSession().getLogger().fatal("An error occurred whilst sending message to client: %s", t);
+            }
         }
 
         @Override
@@ -408,7 +424,9 @@ public class ProxyServlet extends HttpServlet {
         }
 
         @Override
-        public void onError(Exception e) {}
+        public void onError(Exception e) {
+            this.client.getSession().getLogger().fatal("Uncaught: %s", e);
+        }
 
     }
 
