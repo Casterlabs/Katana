@@ -18,3 +18,4 @@ www/
 logs/
 config.json
 ssl.jks
+latest.log
