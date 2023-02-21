@@ -16,6 +16,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import xyz.e3ndr.fastloggingframework.FastLoggingFramework;
+import xyz.e3ndr.fastloggingframework.loggerimpl.FileLogHandler;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
@@ -43,6 +44,8 @@ public class Launcher implements Runnable {
     @SneakyThrows
     @Override
     public void run() {
+        new FileLogHandler(new File("latest.log"));
+
         if (this.trace) {
             FastLoggingFramework.setDefaultLevel(LogLevel.ALL);
             new FastLogger().debug("Trace mode enabled.");
