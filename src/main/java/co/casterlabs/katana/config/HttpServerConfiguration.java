@@ -54,6 +54,7 @@ public class HttpServerConfiguration {
     private void $deserialize_logs_dir(JsonElement dir) {
         if (dir.isJsonString()) {
             this.logsDir = new File(dir.getAsString());
+            this.logsDir.mkdirs();
         }
     }
 
