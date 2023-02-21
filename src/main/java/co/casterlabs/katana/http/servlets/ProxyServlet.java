@@ -179,7 +179,9 @@ public class ProxyServlet extends HttpServlet {
             return null;
         }
 
-        String url = this.config.proxyUrl;
+        String url = this.config.proxyUrl
+            .replace("wss://", "https://") // Remap websocket urls to http.
+            .replace("ws://", "http://");
 
         if (this.config.forwardHost) {
             // Replace the proxyUrl's host with the session's host. Look at the above DNS
@@ -202,8 +204,8 @@ public class ProxyServlet extends HttpServlet {
             url += session.getQueryString();
         }
 
-        Request.Builder builder = new Request.Builder().url(url);
         session.getLogger().debug("Final proxy url: %s", url);
+        Request.Builder builder = new Request.Builder().url(url);
 
         try {
             // If it throws then we have no body.
@@ -300,7 +302,9 @@ public class ProxyServlet extends HttpServlet {
             return null;
         }
 
-        String url = this.config.proxyUrl;
+        String url = this.config.proxyUrl
+            .replace("https://", "wss://") // Remap http urls to websocket.
+            .replace("http://", "ws://");
 
         if (this.config.includePath) {
             if (this.config.proxyPath == null) {
