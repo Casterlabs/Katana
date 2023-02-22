@@ -340,10 +340,15 @@ public class ProxyServlet extends HttpServlet {
                 }
 
                 try {
-                    if (!this.remote.connectBlocking()) {
+                    session.getLogger().debug("Connecting to proxy target...");
+                    if (this.remote.connectBlocking()) {
+                        session.getLogger().debug("Connected to proxy target.");
+                    } else {
+                        session.getLogger().debug("Couldn't connect to proxy target.");
                         websocket.close(WebsocketCloseCode.NORMAL);
                     }
-                } catch (IOException | InterruptedException e) {
+                } catch (Throwable t) {
+                    websocket.getSession().getLogger().fatal("An error occurred whilst connecting to target:\n%s", t);
                     try {
                         websocket.close(WebsocketCloseCode.NORMAL);
                     } catch (IOException ignored) {}
@@ -355,7 +360,7 @@ public class ProxyServlet extends HttpServlet {
                 try {
                     this.remote.send(message);
                 } catch (Throwable t) {
-                    websocket.getSession().getLogger().fatal("An error occurred whilst sending message to target: %s", t);
+                    websocket.getSession().getLogger().fatal("An error occurred whilst sending message to target:\n%s", t);
                     throw t;
                 }
             }
@@ -365,7 +370,7 @@ public class ProxyServlet extends HttpServlet {
                 try {
                     this.remote.send(bytes);
                 } catch (Throwable t) {
-                    websocket.getSession().getLogger().fatal("An error occurred whilst sending message to target: %s", t);
+                    websocket.getSession().getLogger().fatal("An error occurred whilst sending message to target:\n%s", t);
                     throw t;
                 }
             }
