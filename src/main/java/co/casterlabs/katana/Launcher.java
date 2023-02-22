@@ -4,6 +4,7 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
+import co.casterlabs.katana.http.servlets.EchoServlet;
 import co.casterlabs.katana.http.servlets.FileServlet;
 import co.casterlabs.katana.http.servlets.ProxyServlet;
 import co.casterlabs.katana.http.servlets.RedirectServlet;
@@ -57,6 +58,7 @@ public class Launcher implements Runnable {
         katana.addHttpServlet("PROXY", ProxyServlet.class);
         katana.addHttpServlet("REDIRECT", RedirectServlet.class);
         katana.addHttpServlet("FILE", FileServlet.class);
+        katana.addHttpServlet("ECHO", EchoServlet.class);
 
         this.loadConfig(katana);
 
