@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
@@ -23,6 +24,8 @@ import org.jetbrains.annotations.Nullable;
 
 import co.casterlabs.katana.http.HttpRouter;
 import co.casterlabs.rakurai.DataSize;
+import co.casterlabs.rakurai.StringUtil;
+import co.casterlabs.rakurai.collections.HeaderMap;
 import co.casterlabs.rakurai.io.IOUtil;
 import co.casterlabs.rakurai.io.http.DropConnectionException;
 import co.casterlabs.rakurai.io.http.HttpResponse;
@@ -78,6 +81,7 @@ public class ProxyServlet extends HttpServlet {
 
     private OkHttpClient client;
     private @Nullable String proxyUrlHost;
+    private SSLSocketFactory sslSocketFactory;
 
     public ProxyServlet() {
         super("PROXY");
@@ -109,8 +113,9 @@ public class ProxyServlet extends HttpServlet {
 
             SSLContext sslContext = SSLContext.getInstance("SSL");
             sslContext.init(null, trustAllCerts, new SecureRandom());
+            this.sslSocketFactory = sslContext.getSocketFactory();
 
-            okhttpBuilder.sslSocketFactory(sslContext.getSocketFactory(), (X509TrustManager) trustAllCerts[0]);
+            okhttpBuilder.sslSocketFactory(this.sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
             okhttpBuilder.hostnameVerifier((hostname, session) -> true);
         }
 
@@ -336,7 +341,7 @@ public class ProxyServlet extends HttpServlet {
 
             @Override
             public void onOpen(Websocket websocket) {
-                this.remote = new RemoteWebSocketConnection(uri, websocket);
+                this.remote = new RemoteWebSocketConnection(uri, websocket, session.getHeaders());
 
                 for (Entry<String, List<String>> entry : session.getHeaders().entrySet()) {
                     this.remote.addHeader(entry.getKey(), entry.getValue().get(0));
@@ -382,11 +387,32 @@ public class ProxyServlet extends HttpServlet {
         };
     }
 
-    private static class RemoteWebSocketConnection extends WebSocketClient {
+    private class RemoteWebSocketConnection extends WebSocketClient {
         private Websocket client;
 
-        public RemoteWebSocketConnection(URI serverUri, Websocket client) {
+        public RemoteWebSocketConnection(URI serverUri, Websocket client, HeaderMap headers) {
             super(serverUri);
+
+            if (sslSocketFactory != null) {
+                this.setSocketFactory(sslSocketFactory);
+            }
+
+            for (Entry<String, List<String>> header : headers.entrySet()) {
+                String key = header.getKey().toLowerCase();
+
+                if (!DISALLOWED_HEADERS.contains(key)) {
+                    this.addHeader(key, header.getValue().get(0));
+                }
+            }
+
+            if (config.forwardHost) {
+                this.addHeader("Host", this.client.getSession().getHost());
+            }
+
+            if (config.forwardIp) {
+                this.addHeader("X-Forwarded-For", String.join(", ", this.client.getSession().getRequestHops()));
+            }
+
             this.setTcpNoDelay(true);
             this.client = client;
         }
@@ -403,6 +429,7 @@ public class ProxyServlet extends HttpServlet {
         @Override
         public void onMessage(String message) {
             try {
+                this.client.getSession().getLogger().trace("Received message from proxy: %s", message);
                 this.client.send(message);
             } catch (Throwable t) {
                 this.client.getSession().getLogger().fatal("An error occurred whilst sending message to client: %s", t);
@@ -412,7 +439,9 @@ public class ProxyServlet extends HttpServlet {
         @Override
         public void onMessage(ByteBuffer message) {
             try {
-                this.client.send(message.array());
+                byte[] array = message.array();
+                this.client.getSession().getLogger().trace("Received bytes from proxy: %s", StringUtil.bytesToHex(array));
+                this.client.send(array);
             } catch (Throwable t) {
                 this.client.getSession().getLogger().fatal("An error occurred whilst sending message to client: %s", t);
             }
