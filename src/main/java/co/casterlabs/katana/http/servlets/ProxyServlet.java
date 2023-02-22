@@ -3,6 +3,7 @@ package co.casterlabs.katana.http.servlets;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
@@ -14,9 +15,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
@@ -33,6 +35,7 @@ import co.casterlabs.rakurai.io.http.HttpResponse.ResponseContent;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
 import co.casterlabs.rakurai.io.http.websocket.Websocket;
+import co.casterlabs.rakurai.io.http.websocket.WebsocketCloseCode;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
 import co.casterlabs.rakurai.json.Rson;
@@ -94,27 +97,17 @@ public class ProxyServlet extends HttpServlet {
         OkHttpClient.Builder okhttpBuilder = new OkHttpClient.Builder();
 
         if (this.config.ignoreBadSsl) {
-            // https://www.baeldung.com/okhttp-client-trust-all-certificates
-            TrustManager[] trustAllCerts = new TrustManager[] {
-                    new X509TrustManager() {
-                        @Override
-                        public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-
-                        @Override
-                        public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-
-                        @Override
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return new X509Certificate[] {};
-                        }
-                    }
-            };
-
             SSLContext sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, trustAllCerts, new SecureRandom());
+            sslContext.init(
+                null,
+                new TrustManager[] {
+                        UnsafeTrustManager.INSTANCE
+                },
+                new SecureRandom()
+            );
             this.sslSocketFactory = sslContext.getSocketFactory();
 
-            okhttpBuilder.sslSocketFactory(this.sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
+            okhttpBuilder.sslSocketFactory(this.sslSocketFactory, UnsafeTrustManager.INSTANCE);
             okhttpBuilder.hostnameVerifier((hostname, session) -> true);
         }
 
@@ -346,15 +339,15 @@ public class ProxyServlet extends HttpServlet {
                     this.remote.addHeader(entry.getKey(), entry.getValue().get(0));
                 }
 
-//                try {
-//                    if (!this.remote.connectBlocking()) {
-//                        websocket.close(WebsocketCloseCode.NORMAL);
-//                    }
-//                } catch (IOException | InterruptedException e) {
-//                    try {
-//                        websocket.close(WebsocketCloseCode.NORMAL);
-//                    } catch (IOException ignored) {}
-//                }
+                try {
+                    if (!this.remote.connectBlocking()) {
+                        websocket.close(WebsocketCloseCode.NORMAL);
+                    }
+                } catch (IOException | InterruptedException e) {
+                    try {
+                        websocket.close(WebsocketCloseCode.NORMAL);
+                    } catch (IOException ignored) {}
+                }
             }
 
             @Override
@@ -450,9 +443,9 @@ public class ProxyServlet extends HttpServlet {
         @Override
         public void onClose(int code, String reason, boolean remote) {
             this.client.getSession().getLogger().debug("Proxy's close reason: %d %s", code, reason);
-//            try {
-//                this.client.close(WebsocketCloseCode.NORMAL);
-//            } catch (IOException e) {}
+            try {
+                this.client.close(WebsocketCloseCode.NORMAL);
+            } catch (IOException e) {}
         }
 
         @Override
@@ -483,4 +476,31 @@ public class ProxyServlet extends HttpServlet {
         }
     }
 
+}
+
+class UnsafeTrustManager extends X509ExtendedTrustManager {
+    public static final UnsafeTrustManager INSTANCE = new UnsafeTrustManager();
+
+    @Override
+    public void checkClientTrusted(X509Certificate[] chain, String authType) {}
+
+    @Override
+    public void checkServerTrusted(X509Certificate[] chain, String authType) {}
+
+    @Override
+    public X509Certificate[] getAcceptedIssuers() {
+        return new X509Certificate[] {};
+    }
+
+    @Override
+    public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) {}
+
+    @Override
+    public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) {}
+
+    @Override
+    public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {}
+
+    @Override
+    public void checkServerTrusted(X509Certificate[] chain, String authType, SSLEngine engine) {}
 }
