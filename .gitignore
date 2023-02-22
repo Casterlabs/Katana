@@ -19,3 +19,4 @@ logs/
 config.json
 ssl.jks
 latest.log
+keystore.jks
