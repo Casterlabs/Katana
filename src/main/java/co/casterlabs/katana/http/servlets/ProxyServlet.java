@@ -8,8 +8,9 @@ import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.net.ssl.SSLContext;
@@ -392,8 +393,10 @@ public class ProxyServlet extends HttpServlet {
 
         @Override
         public void onOpen(ServerHandshake handshakedata) {
-            List<String> headers = new LinkedList<>();
-            handshakedata.iterateHttpFields().forEachRemaining(headers::add);
+            Map<String, String> headers = new HashMap<>();
+            handshakedata
+                .iterateHttpFields()
+                .forEachRemaining((field) -> headers.put(field, handshakedata.getFieldValue(field)));
             this.client.getSession().getLogger().debug("Handshake headers: %s", headers);
         }
 
