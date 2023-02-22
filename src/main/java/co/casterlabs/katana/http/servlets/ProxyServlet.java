@@ -33,7 +33,6 @@ import co.casterlabs.rakurai.io.http.HttpResponse.ResponseContent;
 import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
 import co.casterlabs.rakurai.io.http.websocket.Websocket;
-import co.casterlabs.rakurai.io.http.websocket.WebsocketCloseCode;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
 import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
 import co.casterlabs.rakurai.json.Rson;
@@ -347,15 +346,15 @@ public class ProxyServlet extends HttpServlet {
                     this.remote.addHeader(entry.getKey(), entry.getValue().get(0));
                 }
 
-                try {
-                    if (!this.remote.connectBlocking()) {
-                        websocket.close(WebsocketCloseCode.NORMAL);
-                    }
-                } catch (IOException | InterruptedException e) {
-                    try {
-                        websocket.close(WebsocketCloseCode.NORMAL);
-                    } catch (IOException ignored) {}
-                }
+//                try {
+//                    if (!this.remote.connectBlocking()) {
+//                        websocket.close(WebsocketCloseCode.NORMAL);
+//                    }
+//                } catch (IOException | InterruptedException e) {
+//                    try {
+//                        websocket.close(WebsocketCloseCode.NORMAL);
+//                    } catch (IOException ignored) {}
+//                }
             }
 
             @Override
@@ -380,7 +379,8 @@ public class ProxyServlet extends HttpServlet {
 
             @Override
             public void onClose(Websocket websocket) {
-                if (!this.remote.isClosing()) {
+                session.getLogger().debug("Closed websocket.");
+                if (!this.remote.isClosing() || !this.remote.isClosed()) {
                     this.remote.close();
                 }
             }
@@ -392,6 +392,7 @@ public class ProxyServlet extends HttpServlet {
 
         public RemoteWebSocketConnection(URI serverUri, Websocket client, HeaderMap headers) {
             super(serverUri);
+            this.client = client;
 
             if (sslSocketFactory != null) {
                 this.setSocketFactory(sslSocketFactory);
@@ -414,7 +415,6 @@ public class ProxyServlet extends HttpServlet {
             }
 
             this.setTcpNoDelay(true);
-            this.client = client;
         }
 
         @Override
@@ -450,9 +450,9 @@ public class ProxyServlet extends HttpServlet {
         @Override
         public void onClose(int code, String reason, boolean remote) {
             this.client.getSession().getLogger().debug("Proxy's close reason: %d %s", code, reason);
-            try {
-                this.client.close(WebsocketCloseCode.NORMAL);
-            } catch (IOException e) {}
+//            try {
+//                this.client.close(WebsocketCloseCode.NORMAL);
+//            } catch (IOException e) {}
         }
 
         @Override
