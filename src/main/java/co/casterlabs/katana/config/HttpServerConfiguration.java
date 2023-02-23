@@ -2,7 +2,6 @@ package co.casterlabs.katana.config;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import co.casterlabs.katana.Katana;
@@ -132,10 +131,6 @@ public class HttpServerConfiguration {
 
             this.servlets.add(servlet);
         }
-
-        Collections.sort(this.servlets, (HttpServlet s1, HttpServlet s2) -> {
-            return s1.getPriority() > s2.getPriority() ? -1 : 1;
-        });
     }
 
     @JsonSerializationMethod("servlets")

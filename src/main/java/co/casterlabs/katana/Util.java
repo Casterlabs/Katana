@@ -4,8 +4,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -32,12 +33,11 @@ public class Util {
                 }
             }
         }
-
         return collection;
     }
 
-    public static <T> Collection<T> regexGet(MultiValuedMap<String, T> map, String in) {
-        Collection<T> ret = new ArrayList<>();
+    public static <T> List<T> regexGet(MultiValuedMap<String, T> map, String in) {
+        List<T> ret = new LinkedList<>();
 
         for (Entry<String, T> entry : map.entries()) {
             if (in.matches(entry.getKey())) {
@@ -48,8 +48,8 @@ public class Util {
         return ret;
     }
 
-    public static <T> Collection<T> regexGet(Map<String, T> map, String in) {
-        Collection<T> ret = new ArrayList<>();
+    public static <T> List<T> regexGet(Map<String, T> map, String in) {
+        List<T> ret = new LinkedList<>();
 
         for (Entry<String, T> entry : map.entrySet()) {
             if (in.matches(entry.getKey())) {
@@ -66,7 +66,6 @@ public class Util {
                 return true;
             }
         }
-
         return false;
     }
 

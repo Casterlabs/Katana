@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.collections4.MultiValuedMap;
@@ -190,7 +191,11 @@ public class HttpRouter implements HttpListener {
                 }
             }
 
-            Collection<HttpServlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
+            List<HttpServlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
+            Collections.sort(servlets, (HttpServlet s1, HttpServlet s2) -> {
+                return s1.getPriority() > s2.getPriority() ? -1 : 1;
+            });
+            session.getLogger().debug("Canidate servlets: %s", servlets);
 
             // Browser is doing a CORS probe, let them.
             if (session.getMethod() == HttpMethod.OPTIONS) {
@@ -244,37 +249,36 @@ public class HttpRouter implements HttpListener {
     // Also interacts with servlets
     @Override
     public @Nullable WebsocketListener serveWebsocketSession(@NonNull String host, @NonNull WebsocketSession session, boolean secure) {
-        Collection<HttpServlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
+        List<HttpServlet> servlets = Util.regexGet(this.hostnames, host.toLowerCase());
+        Collections.sort(servlets, (HttpServlet s1, HttpServlet s2) -> {
+            return s1.getPriority() > s2.getPriority() ? -1 : 1;
+        });
 
         return this.iterateWebsocketConfigs(session, servlets);
     }
 
     private HttpResponse iterateConfigs(HttpSession session, Collection<HttpServlet> servlets) {
-        HttpResponse response = null;
-
         for (HttpServlet servlet : servlets) {
-            response = servlet.serveHttp(session, this);
+            HttpResponse response = servlet.serveHttp(session, this);
 
             if (response != null) {
-                break;
+                return response;
             }
         }
 
-        return response;
+        return null;
     }
 
     private WebsocketListener iterateWebsocketConfigs(WebsocketSession session, Collection<HttpServlet> servlets) {
-        WebsocketListener response = null;
-
         for (HttpServlet servlet : servlets) {
-            response = servlet.serveWebsocket(session, this);
+            WebsocketListener response = servlet.serveWebsocket(session, this);
 
             if (response != null) {
-                break;
+                return response;
             }
         }
 
-        return response;
+        return null;
     }
 
     public boolean isRunning() {

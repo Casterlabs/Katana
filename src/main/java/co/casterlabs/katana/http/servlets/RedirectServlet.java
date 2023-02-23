@@ -13,7 +13,6 @@ import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import lombok.Getter;
-import lombok.SneakyThrows;
 
 public class RedirectServlet extends HttpServlet {
     private @Getter HostConfiguration config;
@@ -43,14 +42,14 @@ public class RedirectServlet extends HttpServlet {
 
     }
 
-    @SneakyThrows
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         String redirectUrl = this.config.redirectUrl;
         if (this.config.includePath) redirectUrl += session.getUri();
 
-        String escaped_redirectUrl = Util.escapeHtml(redirectUrl);
+        session.getLogger().debug("Redirecting to: %s", redirectUrl);
 
+        String escaped_redirectUrl = Util.escapeHtml(redirectUrl);
         return HttpResponse.newFixedLengthResponse(
             StandardHttpStatus.TEMPORARY_REDIRECT,
             "<!DOCTYPE html><html><a href=\"" + escaped_redirectUrl + "\">" + escaped_redirectUrl + "</a></html>"
