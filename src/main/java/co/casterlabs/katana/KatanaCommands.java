@@ -48,4 +48,9 @@ public class KatanaCommands implements CommandListener<Void> {
         this.katana.start();
     }
 
+    @Command(name = "gc", description = "Tells Java to garbage collect.")
+    public void gc(CommandEvent<Void> event) {
+        System.gc();
+    }
+
 }
