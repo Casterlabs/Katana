@@ -15,7 +15,7 @@
 - 🖍️ Simple Json-based configuration (VHost files 🤢).
 - ✅ Sensible defaults (no more Apache/Nginx proxy issues).
 - 💻 Cross platform (runs on Java 11 LTS).
-- ⚡ Freaky Fast (doesn't compromise performance to be light-weight).
+- ⚡ Freaky fast (doesn't compromise performance to be light-weight).
 - ⚖️ Light-weight (runs happily with 80mb of ram and 15% VCPU).
 - 📈 Constantly improving (frequent updates & fixes).
 - 🔒 Secure (say goodbye to zero-days).
