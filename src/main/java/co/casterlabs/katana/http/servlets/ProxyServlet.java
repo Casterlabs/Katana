@@ -29,7 +29,6 @@ import co.casterlabs.rakurai.DataSize;
 import co.casterlabs.rakurai.StringUtil;
 import co.casterlabs.rakurai.collections.HeaderMap;
 import co.casterlabs.rakurai.io.IOUtil;
-import co.casterlabs.rakurai.io.http.DropConnectionException;
 import co.casterlabs.rakurai.io.http.HttpResponse;
 import co.casterlabs.rakurai.io.http.HttpResponse.ResponseContent;
 import co.casterlabs.rakurai.io.http.HttpSession;
@@ -51,10 +50,13 @@ import lombok.Getter;
 import lombok.SneakyThrows;
 import okhttp3.Dns;
 import okhttp3.HttpUrl;
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okio.BufferedSink;
+import okio.Okio;
 
 public class ProxyServlet extends HttpServlet {
     private static final List<String> DISALLOWED_HEADERS = Arrays.asList(
@@ -205,17 +207,32 @@ public class ProxyServlet extends HttpServlet {
         session.getLogger().debug("Final proxy url: %s", url);
         Request.Builder builder = new Request.Builder().url(url);
 
-        try {
-            // If it throws then we have no body.
-            if (session.getRequestBodyBytes() != null) {
-                try {
-                    builder.method(session.getMethod().name().toUpperCase(), RequestBody.create(session.getRequestBodyBytes()));
-                } catch (IOException e) {
-                    session.getLogger().fatal("A fatal error occurred whilst trying to read the body:\n%s", e);
-                    throw new DropConnectionException();
+        RequestBody body = null;
+
+        if (session.hasBody()) {
+            body = new RequestBody() {
+                @Override
+                public MediaType contentType() {
+                    return null;
                 }
-            }
-        } catch (IOException e) {}
+
+                @Override
+                public long contentLength() throws IOException {
+                    try {
+                        return Long.parseLong(session.getHeader("Content-Length"));
+                    } catch (NumberFormatException e) {
+                        return -1;
+                    }
+                }
+
+                @Override
+                public void writeTo(BufferedSink sink) throws IOException {
+                    sink.writeAll(Okio.source(session.getRequestBodyStream()));
+                }
+            };
+        }
+
+        builder.method(session.getRawMethod(), body);
 
         for (Entry<String, List<String>> header : session.getHeaders().entrySet()) {
             String key = header.getKey().toLowerCase();
@@ -232,7 +249,6 @@ public class ProxyServlet extends HttpServlet {
         }
 
         Request request = builder.build();
-
         Response response = client.newCall(request).execute();
 
         try {

@@ -94,7 +94,7 @@
 		<dependency>
 			<groupId>co.casterlabs.Rakurai</groupId>
 			<artifactId>Http-Server</artifactId>
-			<version>1.17.0</version>
+			<version>2ef7904</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
