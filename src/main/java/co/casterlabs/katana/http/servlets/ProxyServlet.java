@@ -166,22 +166,19 @@ public class ProxyServlet extends HttpServlet {
 
     }
 
-    @SneakyThrows
-    @Override
-    public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
-        if (!this.config.allowHttp) {
-            return null;
-        }
+    private String transformUrl(HttpSession session, boolean isWebSocket) {
+        String url = this.config.proxyUrl;
 
-        // If the path doesn't match don't serve.
-        // A NULL path is wildcard.
-        if ((this.config.proxyPath != null) && !session.getUri().matches(this.config.proxyPath)) {
-            return null;
+        // Remap http urls to websocket urls and vice versa.
+        if (isWebSocket) {
+            if (url.startsWith("http://") || url.startsWith("https://")) {
+                url = "ws" + url.substring("http".length());
+            }
+        } else {
+            if (url.startsWith("ws://") || url.startsWith("wss://")) {
+                url = "http" + url.substring("ws".length());
+            }
         }
-
-        String url = this.config.proxyUrl
-            .replace("wss://", "https://") // Remap websocket urls to http.
-            .replace("ws://", "http://");
 
         if (this.config.forwardHost) {
             // Replace the proxyUrl's host with the session's host. Look at the above DNS
@@ -203,6 +200,24 @@ public class ProxyServlet extends HttpServlet {
             url += append;
             url += session.getQueryString();
         }
+
+        return url;
+    }
+
+    @SneakyThrows
+    @Override
+    public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
+        if (!this.config.allowHttp) {
+            return null;
+        }
+
+        // If the path doesn't match don't serve.
+        // A NULL path is wildcard.
+        if ((this.config.proxyPath != null) && !session.getUri().matches(this.config.proxyPath)) {
+            return null;
+        }
+
+        final String url = this.transformUrl(session, false);
 
         session.getLogger().debug("Final proxy url: %s", url);
         Request.Builder builder = new Request.Builder().url(url);
@@ -316,30 +331,7 @@ public class ProxyServlet extends HttpServlet {
             return null;
         }
 
-        String url = this.config.proxyUrl
-            .replace("https://", "wss://") // Remap http urls to websocket.
-            .replace("http://", "ws://");
-
-//        if (this.config.forwardHost) {
-//            // Replace the proxyUrl's host with the session's host. Look at the above DNS
-//            // logic to see what this does.
-//            url = url.replaceFirst(this.proxyUrlHost, session.getHost());
-//            session.getLogger().debug("Rewrote %s to %s, keep this in mind for the following messages.", this.proxyUrlHost, session.getHost());
-//        }
-
-        if (this.config.includePath) {
-            String append;
-
-            if (this.config.proxyPath == null) {
-                append = session.getUri();
-            } else {
-                append = session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
-            }
-
-            session.getLogger().debug("%s -> %s%s%s", url, url, append, session.getQueryString());
-            url += append;
-            url += session.getQueryString();
-        }
+        final String url = this.transformUrl(session, true);
 
         session.getLogger().debug("Final proxy url: %s", url);
         URI uri = URI.create(url);
