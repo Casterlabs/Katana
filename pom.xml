@@ -94,14 +94,14 @@
 		<dependency>
 			<groupId>co.casterlabs.Rakurai</groupId>
 			<artifactId>ImplRakurai</artifactId>
-			<version>0fbb5cf</version>
+			<version>16fc4f1</version>
 			<scope>compile</scope>
 		</dependency>
 		
 		<dependency>
 			<groupId>co.casterlabs.Rakurai</groupId>
 			<artifactId>ImplUndertow</artifactId>
-			<version>0fbb5cf</version>
+			<version>16fc4f1</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -159,7 +159,7 @@
 		<dependency>
 			<groupId>com.github.e3ndr</groupId>
 			<artifactId>FastLoggingFramework</artifactId>
-			<version>1.9.5</version>
+			<version>1.10.0</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>

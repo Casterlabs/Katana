@@ -34,7 +34,6 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
-import xyz.e3ndr.reflectionlib.ReflectionLib;
 
 @Getter
 public class HttpRouter implements HttpListener {
@@ -69,11 +68,6 @@ public class HttpRouter implements HttpListener {
         ALLOWED_METHODS = String.join(", ", methods);
     }
 
-    @SneakyThrows
-    private static FastLogger getLoggerFromServer(HttpServer server) {
-        return ReflectionLib.getValue(server, "logger");
-    }
-
     public HttpRouter(HttpServerConfiguration config, Katana katana) throws IOException {
         this.logger = new FastLogger(String.format("HttpServer (%s)", config.getName()));
         this.katana = katana;
@@ -88,7 +82,7 @@ public class HttpRouter implements HttpListener {
 
         this.server = builder.build(this);
 
-        this.serverLoggers.add(getLoggerFromServer(this.server));
+        this.serverLoggers.add(this.server.getLogger());
 
         HttpServerConfiguration.SSLConfiguration ssl = this.config.getSSL();
         if ((ssl != null) && ssl.enabled) {
@@ -103,14 +97,15 @@ public class HttpRouter implements HttpListener {
                     rakuraiConfig.setDHSize(ssl.dhSize);
                     rakuraiConfig.setEnabledCipherSuites(ssl.enabledCipherSuites);
                     rakuraiConfig.setEnabledTlsVersions(ssl.tls);
-//                    rakuraiConfig.setPort(ssl.port);
 
                     builder.setSsl(rakuraiConfig);
 
                     this.forceHttps = ssl.force;
-                    this.serverSecure = builder.buildSecure(this);
+                    this.serverSecure = builder
+                        .setPort(ssl.port)
+                        .buildSecure(this);
 
-                    this.serverLoggers.add(getLoggerFromServer(this.serverSecure));
+                    this.serverLoggers.add(this.serverSecure.getLogger());
                 }
             } catch (Exception e) {
                 this.failReasons.add(new Reason("Server cannot start due to an exception.", e));
