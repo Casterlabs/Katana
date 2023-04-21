@@ -93,8 +93,15 @@
 		<!-- Http-Server -->
 		<dependency>
 			<groupId>co.casterlabs.Rakurai</groupId>
-			<artifactId>Http-Server</artifactId>
-			<version>17f307f</version>
+			<artifactId>ImplRakurai</artifactId>
+			<version>0fbb5cf</version>
+			<scope>compile</scope>
+		</dependency>
+		
+		<dependency>
+			<groupId>co.casterlabs.Rakurai</groupId>
+			<artifactId>ImplUndertow</artifactId>
+			<version>0fbb5cf</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -105,13 +112,6 @@
 		</dependency>
 
 		<!-- For servlets -->
-		<!-- <dependency>
-			<groupId>com.github.casterlabs</groupId>
-			<artifactId>Miki</artifactId>
-			<version>0458366</version>
-			<scope>compile</scope>
-		</dependency> -->
-
 		<dependency>
 			<groupId>com.squareup.okhttp3</groupId>
 			<artifactId>okhttp</artifactId>
@@ -124,6 +124,12 @@
 			<version>1.5.3</version>
 			<scope>compile</scope>
 		</dependency>
+		<!-- <dependency>
+			<groupId>com.github.casterlabs</groupId>
+			<artifactId>Miki</artifactId>
+			<version>0458366</version>
+			<scope>compile</scope>
+		</dependency> -->
 
 		<!-- Utilities -->
 		<dependency>

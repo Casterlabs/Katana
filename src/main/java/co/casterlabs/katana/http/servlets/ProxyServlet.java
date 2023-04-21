@@ -30,14 +30,13 @@ import co.casterlabs.rakurai.DataSize;
 import co.casterlabs.rakurai.StringUtil;
 import co.casterlabs.rakurai.collections.HeaderMap;
 import co.casterlabs.rakurai.io.IOUtil;
-import co.casterlabs.rakurai.io.http.HttpResponse;
-import co.casterlabs.rakurai.io.http.HttpResponse.ResponseContent;
-import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.HttpStatus;
-import co.casterlabs.rakurai.io.http.websocket.Websocket;
-import co.casterlabs.rakurai.io.http.websocket.WebsocketCloseCode;
-import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
-import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
+import co.casterlabs.rakurai.io.http.server.HttpResponse;
+import co.casterlabs.rakurai.io.http.server.HttpResponse.ResponseContent;
+import co.casterlabs.rakurai.io.http.server.HttpSession;
+import co.casterlabs.rakurai.io.http.server.websocket.Websocket;
+import co.casterlabs.rakurai.io.http.server.websocket.WebsocketListener;
+import co.casterlabs.rakurai.io.http.server.websocket.WebsocketSession;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.annotating.JsonField;
@@ -355,12 +354,12 @@ public class ProxyServlet extends HttpServlet {
                         session.getLogger().debug("Connected to proxy target.");
                     } else {
                         session.getLogger().debug("Couldn't connect to proxy target.");
-                        websocket.close(WebsocketCloseCode.NORMAL);
+                        websocket.close();
                     }
                 } catch (Throwable t) {
                     websocket.getSession().getLogger().fatal("An error occurred whilst connecting to target:\n%s", t);
                     try {
-                        websocket.close(WebsocketCloseCode.NORMAL);
+                        websocket.close();
                     } catch (IOException ignored) {}
                 } finally {
                     this.connectPromise.resolve(null);
@@ -468,7 +467,7 @@ public class ProxyServlet extends HttpServlet {
         public void onClose(int code, String reason, boolean remote) {
             this.client.getSession().getLogger().debug("Proxy's close reason: %d %s", code, reason);
             try {
-                this.client.close(WebsocketCloseCode.NORMAL);
+                this.client.close();
             } catch (IOException e) {}
         }
 

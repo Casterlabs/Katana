@@ -19,16 +19,16 @@ import co.casterlabs.katana.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.DataSize;
 import co.casterlabs.rakurai.io.IOUtil;
 import co.casterlabs.rakurai.io.http.HttpMethod;
-import co.casterlabs.rakurai.io.http.HttpResponse;
-import co.casterlabs.rakurai.io.http.HttpSession;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
 import co.casterlabs.rakurai.io.http.server.HttpListener;
+import co.casterlabs.rakurai.io.http.server.HttpResponse;
 import co.casterlabs.rakurai.io.http.server.HttpServer;
-import co.casterlabs.rakurai.io.http.server.HttpServerBuilder;
-import co.casterlabs.rakurai.io.http.server.HttpServerImplementation;
-import co.casterlabs.rakurai.io.http.server.SSLConfiguration;
-import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
-import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
+import co.casterlabs.rakurai.io.http.server.HttpSession;
+import co.casterlabs.rakurai.io.http.server.config.HttpServerBuilder;
+import co.casterlabs.rakurai.io.http.server.config.HttpServerImplementation;
+import co.casterlabs.rakurai.io.http.server.config.SSLConfiguration;
+import co.casterlabs.rakurai.io.http.server.websocket.WebsocketListener;
+import co.casterlabs.rakurai.io.http.server.websocket.WebsocketSession;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.SneakyThrows;
@@ -38,7 +38,7 @@ import xyz.e3ndr.reflectionlib.ReflectionLib;
 
 @Getter
 public class HttpRouter implements HttpListener {
-    private static final HttpServerImplementation SERVER_IMPLEMENTATION = HttpServerImplementation.UNDERTOW;
+    private static final HttpServerImplementation SERVER_IMPLEMENTATION = HttpServerImplementation.valueOf(System.getProperty("katana.impl", "RAKURAI"));
     private static final String ALLOWED_METHODS;
 
     private MultiValuedMap<String, HttpServlet> hostnames = new ArrayListValuedHashMap<>();
@@ -103,7 +103,7 @@ public class HttpRouter implements HttpListener {
                     rakuraiConfig.setDHSize(ssl.dhSize);
                     rakuraiConfig.setEnabledCipherSuites(ssl.enabledCipherSuites);
                     rakuraiConfig.setEnabledTlsVersions(ssl.tls);
-                    rakuraiConfig.setPort(ssl.port);
+//                    rakuraiConfig.setPort(ssl.port);
 
                     builder.setSsl(rakuraiConfig);
 

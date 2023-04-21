@@ -4,10 +4,10 @@ import java.util.HashSet;
 import java.util.Set;
 
 import co.casterlabs.katana.http.HttpRouter;
-import co.casterlabs.rakurai.io.http.HttpResponse;
-import co.casterlabs.rakurai.io.http.HttpSession;
-import co.casterlabs.rakurai.io.http.websocket.WebsocketListener;
-import co.casterlabs.rakurai.io.http.websocket.WebsocketSession;
+import co.casterlabs.rakurai.io.http.server.HttpResponse;
+import co.casterlabs.rakurai.io.http.server.HttpSession;
+import co.casterlabs.rakurai.io.http.server.websocket.WebsocketListener;
+import co.casterlabs.rakurai.io.http.server.websocket.WebsocketSession;
 import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
