@@ -357,7 +357,7 @@ public class ProxyServlet extends HttpServlet {
                         websocket.close();
                     }
                 } catch (Throwable t) {
-                    websocket.getSession().getLogger().fatal("An error occurred whilst connecting to target:\n%s", t);
+                    websocket.getSession().getLogger().debug("An error occurred whilst connecting to target:\n%s", t);
                     try {
                         websocket.close();
                     } catch (IOException ignored) {}
@@ -373,7 +373,7 @@ public class ProxyServlet extends HttpServlet {
                     this.connectPromise.await();
                     this.remote.send(message);
                 } catch (Throwable t) {
-                    websocket.getSession().getLogger().fatal("An error occurred whilst sending message to target:\n%s", t);
+                    websocket.getSession().getLogger().debug("An error occurred whilst sending message to target:\n%s", t);
                     throw t;
                 }
             }
@@ -385,7 +385,7 @@ public class ProxyServlet extends HttpServlet {
                     this.connectPromise.await();
                     this.remote.send(bytes);
                 } catch (Throwable t) {
-                    websocket.getSession().getLogger().fatal("An error occurred whilst sending message to target:\n%s", t);
+                    websocket.getSession().getLogger().debug("An error occurred whilst sending message to target:\n%s", t);
                     throw t;
                 }
             }
@@ -448,7 +448,7 @@ public class ProxyServlet extends HttpServlet {
                 this.client.getSession().getLogger().trace("Received message from proxy: %s", message);
                 this.client.send(message);
             } catch (Throwable t) {
-                this.client.getSession().getLogger().fatal("An error occurred whilst sending message to client: %s", t);
+                this.client.getSession().getLogger().debug("An error occurred whilst sending message to client: %s", t);
             }
         }
 
@@ -459,7 +459,7 @@ public class ProxyServlet extends HttpServlet {
                 this.client.getSession().getLogger().trace("Received bytes from proxy: %s", StringUtil.bytesToHex(array));
                 this.client.send(array);
             } catch (Throwable t) {
-                this.client.getSession().getLogger().fatal("An error occurred whilst sending message to client: %s", t);
+                this.client.getSession().getLogger().debug("An error occurred whilst sending message to client: %s", t);
             }
         }
 
