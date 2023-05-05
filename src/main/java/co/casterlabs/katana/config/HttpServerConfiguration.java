@@ -1,6 +1,5 @@
 package co.casterlabs.katana.config;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +14,6 @@ import co.casterlabs.rakurai.json.annotating.JsonField;
 import co.casterlabs.rakurai.json.annotating.JsonSerializationMethod;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import co.casterlabs.rakurai.json.element.JsonElement;
-import co.casterlabs.rakurai.json.element.JsonNull;
 import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.element.JsonString;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
@@ -37,8 +35,6 @@ public class HttpServerConfiguration {
     @JsonField("debug_mode")
     private boolean debugMode;
 
-    private @JsonExclude File logsDir;
-
     @JsonField("ssl")
     private SSLConfiguration SSL = new SSLConfiguration();
 
@@ -47,20 +43,6 @@ public class HttpServerConfiguration {
     @JsonSerializationMethod("type")
     private JsonElement $serialize_type() {
         return new JsonString(TYPE);
-    }
-
-    @JsonDeserializationMethod("logs_dir")
-    private void $deserialize_logs_dir(JsonElement dir) {
-        if (dir.isJsonString()) {
-            this.logsDir = new File(dir.getAsString());
-            this.logsDir.mkdirs();
-        }
-    }
-
-    @JsonSerializationMethod("logs_dir")
-    private JsonElement $serialize_logs_dir() {
-        if (this.logsDir == null) return JsonNull.INSTANCE;
-        return new JsonString(this.logsDir.toString());
     }
 
     @JsonDeserializationMethod("hosts")

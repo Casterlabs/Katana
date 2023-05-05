@@ -78,7 +78,6 @@ public class HttpRouter implements HttpListener {
         builder.setPort(this.config.getPort());
         builder.setHttp2Enabled(true);
         builder.setBehindProxy(this.config.isBehindProxy());
-        builder.setLogsDir(this.config.getLogsDir());
 
         this.server = builder.build(this);
 
