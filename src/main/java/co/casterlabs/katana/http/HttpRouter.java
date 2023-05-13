@@ -37,7 +37,7 @@ import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
 @Getter
 public class HttpRouter implements HttpListener {
-    private static final HttpServerImplementation SERVER_IMPLEMENTATION = HttpServerImplementation.valueOf(System.getProperty("katana.impl", "UNDERTOW"));
+    private static final HttpServerImplementation SERVER_IMPLEMENTATION = HttpServerImplementation.valueOf(System.getProperty("katana.impl", "RAKURAI"));
     private static final String ALLOWED_METHODS;
 
     private MultiValuedMap<String, HttpServlet> hostnames = new ArrayListValuedHashMap<>();
