@@ -94,14 +94,14 @@
 		<dependency>
 			<groupId>co.casterlabs.Rakurai</groupId>
 			<artifactId>ImplRakurai</artifactId>
-			<version>3a808b9</version>
+			<version>dd0a2b8</version>
 			<scope>compile</scope>
 		</dependency>
 		
 		<dependency>
 			<groupId>co.casterlabs.Rakurai</groupId>
 			<artifactId>ImplUndertow</artifactId>
-			<version>3a808b9</version>
+			<version>dd0a2b8</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
