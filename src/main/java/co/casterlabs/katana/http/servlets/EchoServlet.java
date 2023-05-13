@@ -58,7 +58,9 @@ public class EchoServlet extends HttpServlet {
             request.append(session.getRequestBody());
         }
 
-        return HttpResponse.newFixedLengthResponse(StandardHttpStatus.OK, request.toString());
+        return HttpResponse
+            .newFixedLengthResponse(StandardHttpStatus.OK, request.toString())
+            .setMimeType("text/plain");
     }
 
     @Override
