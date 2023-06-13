@@ -354,16 +354,15 @@ public class ProxyServlet extends HttpServlet {
                     if (this.remote.connectBlocking()) {
                         session.getLogger().debug("Connected to proxy target.");
                     } else {
-                        session.getLogger().debug("Couldn't connect to proxy target.");
-                        websocket.close();
+                        throw new IOException("Couldn't connect to proxy target.");
                     }
+                    this.connectPromise.resolve(null);
                 } catch (Throwable t) {
+                    this.connectPromise.reject(new DropConnectionException());
                     websocket.getSession().getLogger().debug("An error occurred whilst connecting to target (serving %s): \n%s", uri, t);
                     try {
                         websocket.close();
                     } catch (IOException ignored) {}
-                } finally {
-                    this.connectPromise.resolve(null);
                 }
             }
 
@@ -373,6 +372,8 @@ public class ProxyServlet extends HttpServlet {
                 try {
                     this.connectPromise.await();
                     this.remote.send(message);
+                } catch (DropConnectionException e) {
+                    // NOOP
                 } catch (Throwable t) {
                     websocket.getSession().getLogger().debug("An error occurred whilst sending message to target:\n%s", t);
                     throw t;
@@ -385,6 +386,8 @@ public class ProxyServlet extends HttpServlet {
                 try {
                     this.connectPromise.await();
                     this.remote.send(bytes);
+                } catch (DropConnectionException e) {
+                    // NOOP
                 } catch (Throwable t) {
                     websocket.getSession().getLogger().debug("An error occurred whilst sending message to target:\n%s", t);
                     throw t;
@@ -397,8 +400,8 @@ public class ProxyServlet extends HttpServlet {
                 if (!this.remote.isClosing() || !this.remote.isClosed()) {
                     try {
                         this.connectPromise.await();
+                        this.remote.close();
                     } catch (Throwable ignored) {}
-                    this.remote.close();
                 }
             }
         };
