@@ -31,6 +31,7 @@ import co.casterlabs.rakurai.StringUtil;
 import co.casterlabs.rakurai.collections.HeaderMap;
 import co.casterlabs.rakurai.io.IOUtil;
 import co.casterlabs.rakurai.io.http.HttpStatus;
+import co.casterlabs.rakurai.io.http.server.DropConnectionException;
 import co.casterlabs.rakurai.io.http.server.HttpResponse;
 import co.casterlabs.rakurai.io.http.server.HttpResponse.ResponseContent;
 import co.casterlabs.rakurai.io.http.server.HttpSession;
@@ -264,7 +265,7 @@ public class ProxyServlet extends HttpServlet {
         }
 
         Request request = builder.build();
-        Response response = client.newCall(request).execute();
+        Response response = this.client.newCall(request).execute();
 
         try {
             HttpStatus status = new HttpStatusAdapter(response.code(), response.message());
@@ -312,8 +313,8 @@ public class ProxyServlet extends HttpServlet {
             }
 
             return result;
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable t) {
+            session.getLogger().debug("An error occurred whilst proxying (serving %s %s): \n%s", builder.getMethod$okhttp(), builder.getUrl$okhttp(), t);
             IOUtil.safeClose(response);
             return null;
         }
@@ -357,7 +358,7 @@ public class ProxyServlet extends HttpServlet {
                         websocket.close();
                     }
                 } catch (Throwable t) {
-                    websocket.getSession().getLogger().debug("An error occurred whilst connecting to target:\n%s", t);
+                    websocket.getSession().getLogger().debug("An error occurred whilst connecting to target (serving %s): \n%s", uri, t);
                     try {
                         websocket.close();
                     } catch (IOException ignored) {}
