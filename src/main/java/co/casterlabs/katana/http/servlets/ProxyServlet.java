@@ -265,9 +265,12 @@ public class ProxyServlet extends HttpServlet {
         }
 
         Request request = builder.build();
-        Response response = this.client.newCall(request).execute();
+        Response response = null;
 
         try {
+            Response $response_pointer = this.client.newCall(request).execute();
+            response = $response_pointer;
+
             HttpStatus status = new HttpStatusAdapter(response.code(), response.message());
             long responseLen = Long.parseLong(response.header("Content-Length", "-1"));
             InputStream responseStream = response.body().byteStream();
@@ -293,7 +296,7 @@ public class ProxyServlet extends HttpServlet {
 
                     @Override
                     public void close() throws IOException {
-                        response.close();
+                        $response_pointer.close();
                     }
                 },
                 status
@@ -314,7 +317,7 @@ public class ProxyServlet extends HttpServlet {
 
             return result;
         } catch (Throwable t) {
-            session.getLogger().debug("An error occurred whilst proxying (serving %s %s): \n%s", builder.getMethod$okhttp(), builder.getUrl$okhttp(), t);
+            session.getLogger().severe("An error occurred whilst proxying (serving %s %s): \n%s", builder.getMethod$okhttp(), builder.getUrl$okhttp(), t);
             IOUtil.safeClose(response);
             return null;
         }
@@ -343,6 +346,9 @@ public class ProxyServlet extends HttpServlet {
 
             @Override
             public void onOpen(Websocket websocket) {
+                this.connectPromise.except((t) -> {
+                }); // SILENCE.
+
                 try {
                     this.remote = new RemoteWebSocketConnection(uri, websocket, session.getHeaders());
 
@@ -359,7 +365,7 @@ public class ProxyServlet extends HttpServlet {
                     this.connectPromise.resolve(null);
                 } catch (Throwable t) {
                     this.connectPromise.reject(new DropConnectionException());
-                    websocket.getSession().getLogger().debug("An error occurred whilst connecting to target (serving %s): \n%s", uri, t);
+                    websocket.getSession().getLogger().severe("An error occurred whilst connecting to target (serving %s): \n%s", uri, t);
                     try {
                         websocket.close();
                     } catch (IOException ignored) {}
