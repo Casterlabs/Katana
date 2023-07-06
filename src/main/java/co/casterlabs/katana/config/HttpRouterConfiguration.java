@@ -4,8 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import co.casterlabs.katana.Katana;
-import co.casterlabs.katana.http.servlets.HttpServlet;
-import co.casterlabs.rakurai.io.http.TLSVersion;
+import co.casterlabs.katana.router.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.annotating.JsonDeserializationMethod;
@@ -22,9 +21,7 @@ import lombok.Getter;
 
 @Getter
 @JsonClass(exposeAll = true)
-public class HttpServerConfiguration {
-    public static final String TYPE = "http";
-
+public class HttpRouterConfiguration implements RouterConfiguration {
     private String name = "www";
 
     private int port = 80;
@@ -36,13 +33,18 @@ public class HttpServerConfiguration {
     private boolean debugMode;
 
     @JsonField("ssl")
-    private SSLConfiguration SSL = new SSLConfiguration();
+    private HttpSSLConfiguration SSL = new HttpSSLConfiguration();
 
     private @JsonExclude List<HttpServlet> servlets = new ArrayList<>();
 
+    @Override
+    public RouterType getType() {
+        return RouterType.HTTP;
+    }
+
     @JsonSerializationMethod("type")
     private JsonElement $serialize_type() {
-        return new JsonString(TYPE);
+        return new JsonString(this.getType().name());
     }
 
     @JsonDeserializationMethod("hosts")
@@ -56,7 +58,7 @@ public class HttpServerConfiguration {
             JsonObject config = e.getAsObject();
             String type = config.getString("type");
 
-            HttpServlet servlet = Katana.getInstance().getHttpServlet(type);
+            HttpServlet servlet = HttpServlet.create(type);
 
             // Deprecated stuff.
             if (servlet.getClass().isAnnotationPresent(Deprecated.class)) {
@@ -157,48 +159,13 @@ public class HttpServerConfiguration {
     }
 
     @JsonClass(exposeAll = true)
-    public static class SSLConfiguration {
-        public boolean enabled = false;
+    public static class HttpSSLConfiguration extends SSLConfiguration {
         public int port = 443;
-
-        public TLSVersion[] tls = TLSVersion.values();
-        @JsonField("enabled_cipher_suites")
-        public String[] enabledCipherSuites = {
-                "TLS_ECDHE_PSK_WITH_AES_128_CCM_SHA256",
-                "TLS_ECDHE_PSK_WITH_AES_256_GCM_SHA384",
-                "TLS_ECDHE_PSK_WITH_AES_128_GCM_SHA256",
-                "TLS_DHE_PSK_WITH_CHACHA20_POLY1305_SHA256",
-                "TLS_ECDHE_PSK_WITH_CHACHA20_POLY1305_SHA256",
-                "TLS_DHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
-                "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
-                "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
-                "TLS_DHE_PSK_WITH_AES_256_CCM",
-                "TLS_DHE_PSK_WITH_AES_128_CCM",
-                "TLS_DHE_RSA_WITH_AES_256_CCM",
-                "TLS_DHE_RSA_WITH_AES_128_CCM",
-                "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-                "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-                "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-                "TLS_AES_128_CCM_SHA256",
-                "TLS_CHACHA20_POLY1305_SHA256",
-                "TLS_AES_256_GCM_SHA384",
-                "TLS_AES_128_GCM_SHA256",
-                "TLS_DHE_PSK_WITH_AES_256_GCM_SHA384",
-                "TLS_DHE_PSK_WITH_AES_128_GCM_SHA256",
-                "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384",
-                "TLS_DHE_RSA_WITH_AES_128_GCM_SHA256"
-        }; // Null = All Available
-        @JsonField("dh_size")
-        public int dhSize = 2048;
 
         @JsonField("allow_insecure")
         public boolean allowInsecure = true;
-        public boolean force = false;
 
-        @JsonField("keystore_password")
-        public String keystorePassword = "";
-        public String keystore = "";
+        public boolean force = false;
 
     }
 

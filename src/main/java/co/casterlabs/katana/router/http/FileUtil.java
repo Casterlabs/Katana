@@ -1,4 +1,4 @@
-package co.casterlabs.katana;
+package co.casterlabs.katana.router.http;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,7 +67,7 @@ public class FileUtil {
 
             return response;
         } catch (IOException e) {
-            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Error while reading file (exists)", null);
+            return HttpRouter.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Error while reading file (exists)", null);
         }
     }
 

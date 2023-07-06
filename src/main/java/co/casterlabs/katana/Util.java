@@ -12,12 +12,7 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.MultiValuedMap;
-import org.jetbrains.annotations.Nullable;
 
-import co.casterlabs.katana.config.HttpServerConfiguration;
-import co.casterlabs.rakurai.io.http.HttpStatus;
-import co.casterlabs.rakurai.io.http.server.HttpResponse;
-import co.casterlabs.rakurai.io.http.server.HttpSession;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import co.casterlabs.rakurai.json.element.JsonElement;
@@ -67,16 +62,6 @@ public class Util {
             }
         }
         return false;
-    }
-
-    public static HttpResponse errorResponse(HttpSession session, HttpStatus status, String description, @Nullable HttpServerConfiguration config) {
-        // @formatter:off
-        return HttpResponse.newFixedLengthResponse(status, Katana.ERROR_HTML
-                .replace("$RESPONSECODE", String.valueOf(status.getStatusCode()))
-                .replace("$DESCRIPTION", description)
-                .replace("$ADDRESS", String.format("%s:%d", session.getHost(), session.getPort()))
-        ).setMimeType("text/html");
-        // @formatter:on
     }
 
     public static String getFileOrNull(String file) {

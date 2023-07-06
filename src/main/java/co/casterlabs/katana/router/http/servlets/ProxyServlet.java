@@ -1,4 +1,4 @@
-package co.casterlabs.katana.http.servlets;
+package co.casterlabs.katana.router.http.servlets;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,7 +25,7 @@ import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.Nullable;
 
 import co.casterlabs.commons.async.PromiseWithHandles;
-import co.casterlabs.katana.http.HttpRouter;
+import co.casterlabs.katana.router.http.HttpRouter;
 import co.casterlabs.rakurai.DataSize;
 import co.casterlabs.rakurai.StringUtil;
 import co.casterlabs.rakurai.collections.HeaderMap;

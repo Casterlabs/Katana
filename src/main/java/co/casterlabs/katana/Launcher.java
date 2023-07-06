@@ -4,11 +4,6 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 
-import co.casterlabs.katana.http.servlets.EchoServlet;
-import co.casterlabs.katana.http.servlets.FileServlet;
-import co.casterlabs.katana.http.servlets.ProxyServlet;
-import co.casterlabs.katana.http.servlets.RedirectServlet;
-import co.casterlabs.katana.http.servlets.StaticServlet;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import co.casterlabs.rakurai.json.element.JsonObject;
 import lombok.Getter;
@@ -54,12 +49,6 @@ public class Launcher implements Runnable {
         }
 
         Katana katana = new Katana(this);
-
-        katana.addHttpServlet("STATIC", StaticServlet.class);
-        katana.addHttpServlet("PROXY", ProxyServlet.class);
-        katana.addHttpServlet("REDIRECT", RedirectServlet.class);
-        katana.addHttpServlet("FILE", FileServlet.class);
-        katana.addHttpServlet("ECHO", EchoServlet.class);
 
         this.loadConfig(katana);
 

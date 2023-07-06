@@ -1,13 +1,12 @@
-package co.casterlabs.katana.http.servlets;
+package co.casterlabs.katana.router.http.servlets;
 
 import java.io.File;
 import java.net.URLDecoder;
 import java.util.Arrays;
 import java.util.List;
 
-import co.casterlabs.katana.FileUtil;
-import co.casterlabs.katana.Util;
-import co.casterlabs.katana.http.HttpRouter;
+import co.casterlabs.katana.router.http.FileUtil;
+import co.casterlabs.katana.router.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
 import co.casterlabs.rakurai.io.http.server.HttpResponse;
 import co.casterlabs.rakurai.io.http.server.HttpSession;
@@ -71,9 +70,9 @@ public class StaticServlet extends HttpServlet {
 //                }
             }
 
-            return Util.errorResponse(session, StandardHttpStatus.NOT_FOUND, "File not found.", router.getConfig());
+            return HttpRouter.errorResponse(session, StandardHttpStatus.NOT_FOUND, "File not found.", router.getConfig());
         } catch (Exception e) {
-            return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Unable to read file.", router.getConfig());
+            return HttpRouter.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Unable to read file.", router.getConfig());
         }
     }
 

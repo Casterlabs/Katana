@@ -1,4 +1,4 @@
-package co.casterlabs.katana.http;
+package co.casterlabs.katana.router.http;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,13 +12,15 @@ import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.jetbrains.annotations.Nullable;
 
 import co.casterlabs.katana.Katana;
-import co.casterlabs.katana.Reason;
 import co.casterlabs.katana.Util;
-import co.casterlabs.katana.config.HttpServerConfiguration;
-import co.casterlabs.katana.http.servlets.HttpServlet;
+import co.casterlabs.katana.config.HttpRouterConfiguration;
+import co.casterlabs.katana.config.HttpRouterConfiguration.HttpSSLConfiguration;
+import co.casterlabs.katana.router.KatanaRouter;
+import co.casterlabs.katana.router.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.DataSize;
 import co.casterlabs.rakurai.io.IOUtil;
 import co.casterlabs.rakurai.io.http.HttpMethod;
+import co.casterlabs.rakurai.io.http.HttpStatus;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
 import co.casterlabs.rakurai.io.http.server.HttpListener;
 import co.casterlabs.rakurai.io.http.server.HttpResponse;
@@ -36,14 +38,15 @@ import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
 @Getter
-public class HttpRouter implements HttpListener {
+public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfiguration> {
+    public static final String ERROR_HTML = "<!DOCTYPE html><html><head><title>$RESPONSECODE</title></head><body><h1>$RESPONSECODE</h1><p>$DESCRIPTION</p><br/><p><i>Running Casterlabs Katana, $ADDRESS</i></p></body></html>";
+
     private static final String ALLOWED_METHODS;
 
     private MultiValuedMap<String, HttpServlet> hostnames = new ArrayListValuedHashMap<>();
-    private List<Reason> failReasons = new ArrayList<>();
     private boolean keepErrorStatus = true;
     private boolean allowInsecure = true;
-    private HttpServerConfiguration config;
+    private HttpRouterConfiguration config;
     private boolean forceHttps = false;
     private FastLogger logger;
     private Katana katana;
@@ -67,7 +70,8 @@ public class HttpRouter implements HttpListener {
         ALLOWED_METHODS = String.join(", ", methods);
     }
 
-    public HttpRouter(HttpServerConfiguration config, Katana katana) throws IOException {
+    @SneakyThrows
+    public HttpRouter(HttpRouterConfiguration config, Katana katana) throws IOException {
         this.logger = new FastLogger(String.format("HttpServer (%s)", config.getName()));
         this.katana = katana;
         this.config = config;
@@ -82,38 +86,35 @@ public class HttpRouter implements HttpListener {
 
         this.serverLoggers.add(this.server.getLogger());
 
-        HttpServerConfiguration.SSLConfiguration ssl = this.config.getSSL();
+        HttpSSLConfiguration ssl = this.config.getSSL();
         if ((ssl != null) && ssl.enabled) {
-            try {
-                File keystore = new File(ssl.keystore);
+            File keystore = new File(ssl.keystore);
 
-                if (!keystore.exists()) {
-                    this.logger.severe("Unable to find SSL certificate file.");
-                } else {
-                    SSLConfiguration rakuraiConfig = new SSLConfiguration(keystore, ssl.keystorePassword.toCharArray());
+            if (!keystore.exists()) {
+                this.logger.severe("Unable to find SSL certificate file.");
+            } else {
+                SSLConfiguration rakuraiConfig = new SSLConfiguration(keystore, ssl.keystorePassword.toCharArray());
 
-                    rakuraiConfig.setDHSize(ssl.dhSize);
-                    rakuraiConfig.setEnabledCipherSuites(ssl.enabledCipherSuites);
-                    rakuraiConfig.setEnabledTlsVersions(ssl.tls);
+                rakuraiConfig.setDHSize(ssl.dhSize);
+                rakuraiConfig.setEnabledCipherSuites(ssl.enabledCipherSuites);
+                rakuraiConfig.setEnabledTlsVersions(ssl.tls);
 
-                    builder.setSsl(rakuraiConfig);
+                builder.setSsl(rakuraiConfig);
 
-                    this.forceHttps = ssl.force;
-                    this.serverSecure = builder
-                        .setPort(ssl.port)
-                        .buildSecure(this);
+                this.forceHttps = ssl.force;
+                this.serverSecure = builder
+                    .setPort(ssl.port)
+                    .buildSecure(this);
 
-                    this.serverLoggers.add(this.serverSecure.getLogger());
-                }
-            } catch (Exception e) {
-                this.failReasons.add(new Reason("Server cannot start due to an exception.", e));
+                this.serverLoggers.add(this.serverSecure.getLogger());
             }
         }
 
         this.loadConfig(this.config);
     }
 
-    public void loadConfig(HttpServerConfiguration config) {
+    @Override
+    public void loadConfig(HttpRouterConfiguration config) {
         this.config = config;
 
         this.hostnames.clear();
@@ -135,26 +136,23 @@ public class HttpRouter implements HttpListener {
         }
     }
 
+    @SneakyThrows
+    @Override
     public void start() {
-        if (this.failReasons.size() != 0) return;
+        if ((this.serverSecure != null) && !this.serverSecure.isAlive()) {
+            if (this.forceHttps) this.logger.info("Forcing secure connections.");
 
-        try {
-            if ((this.serverSecure != null) && !this.serverSecure.isAlive()) {
-                if (this.forceHttps) this.logger.info("Forcing secure connections.");
-
-                this.serverSecure.start();
-                this.logger.info("Started secure server on port %d.", this.serverSecure.getPort());
-            }
-            if ((this.server != null) && !this.server.isAlive()) {
-                this.server.start();
-                this.logger.info("Started server on port %d.", this.server.getPort());
-            }
-        } catch (IOException e) {
-            this.failReasons.add(new Reason(String.format("Unable to bind on port."), e));
+            this.serverSecure.start();
+            this.logger.info("Started secure server on port %d.", this.serverSecure.getPort());
+        }
+        if ((this.server != null) && !this.server.isAlive()) {
+            this.server.start();
+            this.logger.info("Started server on port %d.", this.server.getPort());
         }
     }
 
     @SneakyThrows
+    @Override
     public void stop() {
         if (this.serverSecure != null) {
             this.serverSecure.stop();
@@ -180,7 +178,7 @@ public class HttpRouter implements HttpListener {
                         .putHeader("Location", "https://" + host + session.getUri() + session.getQueryString());
                 } else {
                     session.getLogger().info("Request is over http, this is forbidden.");
-                    return Util.errorResponse(session, StandardHttpStatus.FORBIDDEN, "Insecure connections are not allowed.", this.config);
+                    return HttpRouter.errorResponse(session, StandardHttpStatus.FORBIDDEN, "Insecure connections are not allowed.", this.config);
                 }
             }
 
@@ -203,7 +201,7 @@ public class HttpRouter implements HttpListener {
             HttpResponse response = this.iterateConfigs(session, servlets);
 
             if (response == null) {
-                return Util.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "No servlet available.", this.config);
+                return HttpRouter.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "No servlet available.", this.config);
             }
 
             this.handleCors(servlets, session, response);
@@ -274,6 +272,7 @@ public class HttpRouter implements HttpListener {
         return null;
     }
 
+    @Override
     public boolean isRunning() {
         boolean serverAlive = (this.server != null) ? this.server.isAlive() : false;
         boolean serverSecureAlive = (this.serverSecure != null) ? this.serverSecure.isAlive() : false;
@@ -292,6 +291,16 @@ public class HttpRouter implements HttpListener {
                     this.server.getPort()
             };
         }
+    }
+
+    public static HttpResponse errorResponse(HttpSession session, HttpStatus status, String description, @Nullable HttpRouterConfiguration config) {
+        // @formatter:off
+        return HttpResponse.newFixedLengthResponse(status, ERROR_HTML
+                .replace("$RESPONSECODE", String.valueOf(status.getStatusCode()))
+                .replace("$DESCRIPTION", description)
+                .replace("$ADDRESS", String.format("%s:%d", session.getHost(), session.getPort()))
+        ).setMimeType("text/html");
+        // @formatter:on
     }
 
 }

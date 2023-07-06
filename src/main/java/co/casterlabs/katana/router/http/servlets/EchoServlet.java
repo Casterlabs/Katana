@@ -1,9 +1,9 @@
-package co.casterlabs.katana.http.servlets;
+package co.casterlabs.katana.router.http.servlets;
 
 import java.util.List;
 import java.util.Map.Entry;
 
-import co.casterlabs.katana.http.HttpRouter;
+import co.casterlabs.katana.router.http.HttpRouter;
 import co.casterlabs.rakurai.io.http.StandardHttpStatus;
 import co.casterlabs.rakurai.io.http.server.HttpResponse;
 import co.casterlabs.rakurai.io.http.server.HttpSession;
