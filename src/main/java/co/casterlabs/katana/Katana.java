@@ -10,6 +10,8 @@ import co.casterlabs.katana.router.KatanaRouterConfiguration;
 import co.casterlabs.katana.router.KatanaRouterConfiguration.RouterType;
 import co.casterlabs.katana.router.http.HttpRouter;
 import co.casterlabs.katana.router.http.HttpRouterConfiguration;
+import co.casterlabs.katana.router.tcp.TcpRouter;
+import co.casterlabs.katana.router.tcp.TcpRouterConfiguration;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import co.casterlabs.rakurai.json.element.JsonElement;
@@ -67,7 +69,7 @@ public class Katana {
             );
 
             switch (type) {
-                case HTTP: {
+                case HTTP:
                     try {
                         HttpRouterConfiguration config = Rson.DEFAULT.fromJson(configElement, HttpRouterConfiguration.class);
                         updatedResult.add(Rson.DEFAULT.toJson(config));
@@ -78,7 +80,18 @@ public class Katana {
                         this.logger.severe("An exception occurred whilst loading config:\n%s", e);
                     }
                     break;
-                }
+
+                case TCP:
+                    try {
+                        TcpRouterConfiguration config = Rson.DEFAULT.fromJson(configElement, TcpRouterConfiguration.class);
+                        updatedResult.add(Rson.DEFAULT.toJson(config));
+
+                        this.addHttpConfiguration(config);
+                    } catch (Exception e) {
+                        updatedResult.add(element); // Add back the raw json, let the user fix it.
+                        this.logger.severe("An exception occurred whilst loading config:\n%s", e);
+                    }
+                    break;
 
                 // TODO others ;)
             }
@@ -98,7 +111,15 @@ public class Katana {
                 }
                 break;
 
-            // TODO others ;)
+            case TCP:
+                if (this.routers.containsKey(config.getName())) {
+                    ((TcpRouter) this.routers.get(config.getName()))
+                        .loadConfig((TcpRouterConfiguration) config);
+                } else {
+                    this.routers.put(config.getName(), new TcpRouter((TcpRouterConfiguration) config, this));
+                }
+                break;
+
         }
     }
 
