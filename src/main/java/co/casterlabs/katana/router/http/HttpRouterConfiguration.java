@@ -1,9 +1,10 @@
-package co.casterlabs.katana.config;
+package co.casterlabs.katana.router.http;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import co.casterlabs.katana.Katana;
+import co.casterlabs.katana.router.KatanaRouterConfiguration;
 import co.casterlabs.katana.router.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
@@ -21,7 +22,7 @@ import lombok.Getter;
 
 @Getter
 @JsonClass(exposeAll = true)
-public class HttpRouterConfiguration implements RouterConfiguration {
+public class HttpRouterConfiguration implements KatanaRouterConfiguration {
     private String name = "www";
 
     private int port = 80;

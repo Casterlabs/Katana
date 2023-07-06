@@ -13,9 +13,8 @@ import org.jetbrains.annotations.Nullable;
 
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
-import co.casterlabs.katana.config.HttpRouterConfiguration;
-import co.casterlabs.katana.config.HttpRouterConfiguration.HttpSSLConfiguration;
 import co.casterlabs.katana.router.KatanaRouter;
+import co.casterlabs.katana.router.http.HttpRouterConfiguration.HttpSSLConfiguration;
 import co.casterlabs.katana.router.http.servlets.HttpServlet;
 import co.casterlabs.rakurai.DataSize;
 import co.casterlabs.rakurai.io.IOUtil;

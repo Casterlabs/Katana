@@ -1,10 +1,10 @@
-package co.casterlabs.katana.config;
+package co.casterlabs.katana.router;
 
 import co.casterlabs.rakurai.io.http.TLSVersion;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.annotating.JsonField;
 
-public interface RouterConfiguration {
+public interface KatanaRouterConfiguration {
 
     public String getName();
 

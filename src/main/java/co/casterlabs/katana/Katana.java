@@ -5,11 +5,11 @@ import java.util.Map;
 import java.util.Scanner;
 
 import co.casterlabs.commons.async.AsyncTask;
-import co.casterlabs.katana.config.HttpRouterConfiguration;
-import co.casterlabs.katana.config.RouterConfiguration;
-import co.casterlabs.katana.config.RouterConfiguration.RouterType;
 import co.casterlabs.katana.router.KatanaRouter;
+import co.casterlabs.katana.router.KatanaRouterConfiguration;
+import co.casterlabs.katana.router.KatanaRouterConfiguration.RouterType;
 import co.casterlabs.katana.router.http.HttpRouter;
+import co.casterlabs.katana.router.http.HttpRouterConfiguration;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import co.casterlabs.rakurai.json.element.JsonElement;
@@ -87,7 +87,7 @@ public class Katana {
         return updatedResult.toString(true);
     }
 
-    public void addHttpConfiguration(RouterConfiguration config) throws Exception {
+    public void addHttpConfiguration(KatanaRouterConfiguration config) throws Exception {
         switch (config.getType()) {
             case HTTP:
                 if (this.routers.containsKey(config.getName())) {

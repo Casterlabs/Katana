@@ -1,8 +1,6 @@
 package co.casterlabs.katana.router;
 
-import co.casterlabs.katana.config.RouterConfiguration;
-
-public interface KatanaRouter<T extends RouterConfiguration> {
+public interface KatanaRouter<T extends KatanaRouterConfiguration> {
 
     public void loadConfig(T config);
 
