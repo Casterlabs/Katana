@@ -41,7 +41,9 @@ public class Launcher implements Runnable {
     @Override
     public void run() {
         new FileLogHandler(new File("latest.log"));
-        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "warn");
+
+        System.setProperty("fastloggingframework.wrapsystem", "true");
+        FastLoggingFramework.setColorEnabled(true);
 
         if (this.trace) {
             FastLoggingFramework.setDefaultLevel(LogLevel.ALL);

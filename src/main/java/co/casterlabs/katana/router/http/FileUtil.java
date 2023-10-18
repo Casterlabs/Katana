@@ -4,10 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import co.casterlabs.rakurai.io.http.MimeTypes;
-import co.casterlabs.rakurai.io.http.StandardHttpStatus;
-import co.casterlabs.rakurai.io.http.server.HttpResponse;
-import co.casterlabs.rakurai.io.http.server.HttpSession;
+import co.casterlabs.rhs.protocol.StandardHttpStatus;
+import co.casterlabs.rhs.server.HttpResponse;
+import co.casterlabs.rhs.session.HttpSession;
+import co.casterlabs.rhs.util.MimeTypes;
 
 public class FileUtil {
 

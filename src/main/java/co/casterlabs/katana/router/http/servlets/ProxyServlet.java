@@ -25,19 +25,9 @@ import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.Nullable;
 
 import co.casterlabs.commons.async.PromiseWithHandles;
+import co.casterlabs.commons.io.streams.StreamUtil;
+import co.casterlabs.katana.Util;
 import co.casterlabs.katana.router.http.HttpRouter;
-import co.casterlabs.rakurai.DataSize;
-import co.casterlabs.rakurai.StringUtil;
-import co.casterlabs.rakurai.collections.HeaderMap;
-import co.casterlabs.rakurai.io.IOUtil;
-import co.casterlabs.rakurai.io.http.HttpStatus;
-import co.casterlabs.rakurai.io.http.server.DropConnectionException;
-import co.casterlabs.rakurai.io.http.server.HttpResponse;
-import co.casterlabs.rakurai.io.http.server.HttpResponse.ResponseContent;
-import co.casterlabs.rakurai.io.http.server.HttpSession;
-import co.casterlabs.rakurai.io.http.server.websocket.Websocket;
-import co.casterlabs.rakurai.io.http.server.websocket.WebsocketListener;
-import co.casterlabs.rakurai.io.http.server.websocket.WebsocketSession;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.annotating.JsonField;
@@ -45,6 +35,15 @@ import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
+import co.casterlabs.rhs.protocol.HttpStatus;
+import co.casterlabs.rhs.server.HttpResponse;
+import co.casterlabs.rhs.server.HttpResponse.ResponseContent;
+import co.casterlabs.rhs.session.HttpSession;
+import co.casterlabs.rhs.session.Websocket;
+import co.casterlabs.rhs.session.WebsocketListener;
+import co.casterlabs.rhs.session.WebsocketSession;
+import co.casterlabs.rhs.util.DropConnectionException;
+import co.casterlabs.rhs.util.HeaderMap;
 import kotlin.Pair;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -281,11 +280,11 @@ public class ProxyServlet extends HttpServlet {
                     public void write(OutputStream out) throws IOException {
                         // Automatically uses the content length or 16MB for the IO buffer, whichever is
                         // smallest.
-                        IOUtil.writeInputStreamToOutputStream(
+                        StreamUtil.streamTransfer(
                             responseStream,
                             out,
-                            responseLen,
-                            (int) DataSize.MEGABYTE.toBytes(16)
+                            2048,
+                            responseLen
                         );
                     }
 
@@ -318,7 +317,7 @@ public class ProxyServlet extends HttpServlet {
             return result;
         } catch (Throwable t) {
             session.getLogger().severe("An error occurred whilst proxying (serving %s %s): \n%s", builder.getMethod$okhttp(), builder.getUrl$okhttp(), t);
-            IOUtil.safeClose(response);
+            response.close();
             return null;
         }
     }
@@ -466,7 +465,7 @@ public class ProxyServlet extends HttpServlet {
         public void onMessage(ByteBuffer message) {
             try {
                 byte[] array = message.array();
-                this.client.getSession().getLogger().trace("Received bytes from proxy: %s", StringUtil.bytesToHex(array));
+                this.client.getSession().getLogger().trace("Received bytes from proxy: %s", Util.bytesToHex(array));
                 this.client.send(array);
             } catch (Throwable t) {
                 this.client.getSession().getLogger().debug("An error occurred whilst sending message to client: %s", t);

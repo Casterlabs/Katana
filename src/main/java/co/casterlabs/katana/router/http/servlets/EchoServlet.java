@@ -4,17 +4,17 @@ import java.util.List;
 import java.util.Map.Entry;
 
 import co.casterlabs.katana.router.http.HttpRouter;
-import co.casterlabs.rakurai.io.http.StandardHttpStatus;
-import co.casterlabs.rakurai.io.http.server.HttpResponse;
-import co.casterlabs.rakurai.io.http.server.HttpSession;
-import co.casterlabs.rakurai.io.http.server.websocket.Websocket;
-import co.casterlabs.rakurai.io.http.server.websocket.WebsocketListener;
-import co.casterlabs.rakurai.io.http.server.websocket.WebsocketSession;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
+import co.casterlabs.rhs.protocol.StandardHttpStatus;
+import co.casterlabs.rhs.server.HttpResponse;
+import co.casterlabs.rhs.session.HttpSession;
+import co.casterlabs.rhs.session.Websocket;
+import co.casterlabs.rhs.session.WebsocketListener;
+import co.casterlabs.rhs.session.WebsocketSession;
 import lombok.Getter;
 import lombok.SneakyThrows;
 
