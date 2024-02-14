@@ -50,9 +50,12 @@ public interface KatanaRouterConfiguration {
         @JsonField("dh_size")
         public int dhSize = 2048;
 
-        @JsonField("keystore_password")
-        public String keystorePassword = "";
-        public String keystore = "";
+        @JsonField("certificate_file")
+        public String certificateFile = "";
+        @JsonField("private_key_file")
+        public String privateKeyFile = "";
+        @JsonField("trust_chain_file")
+        public String trustChainFile = "";
 
     }
 

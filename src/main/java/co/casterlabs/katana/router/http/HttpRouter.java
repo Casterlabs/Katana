@@ -1,11 +1,14 @@
 package co.casterlabs.katana.router.http;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+
+import javax.net.ssl.X509ExtendedKeyManager;
+import javax.net.ssl.X509ExtendedTrustManager;
 
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
@@ -23,13 +26,16 @@ import co.casterlabs.rhs.server.HttpListener;
 import co.casterlabs.rhs.server.HttpResponse;
 import co.casterlabs.rhs.server.HttpServer;
 import co.casterlabs.rhs.server.HttpServerBuilder;
-import co.casterlabs.rhs.server.HttpServerBuilder.SSLConfiguration;
+import co.casterlabs.rhs.server.SSLUtil;
 import co.casterlabs.rhs.session.HttpSession;
+import co.casterlabs.rhs.session.TLSVersion;
 import co.casterlabs.rhs.session.WebsocketListener;
 import co.casterlabs.rhs.session.WebsocketSession;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.SneakyThrows;
+import nl.altindag.ssl.SSLFactory;
+import nl.altindag.ssl.pem.util.PemUtils;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
@@ -68,8 +74,8 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
         this.config = config;
 
         HttpServerBuilder builder = new HttpServerBuilder()
-            .setPort(this.config.getPort())
-            .setBehindProxy(this.config.isBehindProxy());
+            .withPort(this.config.getPort())
+            .withBehindProxy(this.config.isBehindProxy());
 
         this.server = builder.build(this);
 
@@ -77,26 +83,24 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
 
         HttpSSLConfiguration ssl = this.config.getSSL();
         if ((ssl != null) && ssl.enabled) {
-            File keystore = new File(ssl.keystore);
+            X509ExtendedKeyManager keyManager = PemUtils.loadIdentityMaterial(Paths.get(ssl.trustChainFile), Paths.get(ssl.privateKeyFile));
+            X509ExtendedTrustManager trustManager = PemUtils.loadTrustMaterial(Paths.get(ssl.certificateFile));
 
-            if (!keystore.exists()) {
-                this.logger.severe("Unable to find SSL certificate file.");
-            } else {
-                SSLConfiguration rakuraiConfig = new SSLConfiguration(keystore, ssl.keystorePassword.toCharArray());
+            SSLFactory factory = SSLFactory.builder()
+                .withIdentityMaterial(keyManager)
+                .withTrustMaterial(trustManager)
+                .withCiphers(ssl.enabledCipherSuites) // Unsupported ciphers are automatically excluded.
+                .withProtocols(TLSVersion.toRuntimeNames(ssl.tls))
+                .build();
+            SSLUtil.applyDHSize(ssl.dhSize);
 
-                rakuraiConfig.setDHSize(ssl.dhSize);
-                rakuraiConfig.setEnabledCipherSuites(ssl.enabledCipherSuites);
-                rakuraiConfig.setEnabledTlsVersions(ssl.tls);
+            this.forceHttps = ssl.force;
+            this.serverSecure = builder
+                .withPort(ssl.port)
+                .withSsl(factory)
+                .buildSecure(this);
 
-                builder.setSsl(rakuraiConfig);
-
-                this.forceHttps = ssl.force;
-                this.serverSecure = builder
-                    .setPort(ssl.port)
-                    .buildSecure(this);
-
-                this.serverLoggers.add(this.serverSecure.getLogger());
-            }
+            this.serverLoggers.add(this.serverSecure.getLogger());
         }
 
         this.loadConfig(this.config);

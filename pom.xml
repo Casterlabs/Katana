@@ -64,6 +64,10 @@
 
 	<repositories>
 		<repository>
+			<id>central</id>
+			<url>https://repo.maven.apache.org/maven2</url>
+		</repository>
+		<repository>
 			<id>casterlabs-maven</id>
 			<url>https://repo.casterlabs.co/maven</url>
 		</repository>
@@ -91,13 +95,19 @@
 		<dependency>
 			<groupId>co.casterlabs</groupId>
 			<artifactId>Rakurai-Http-Server</artifactId>
-			<version>2.0.3</version>
+			<version>2.1.1</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs</groupId>
 			<artifactId>Rson</artifactId>
 			<version>1.17.9</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.github.hakky54</groupId>
+			<artifactId>sslcontext-kickstart-for-pem</artifactId>
+			<version>8.3.1</version>
 			<scope>compile</scope>
 		</dependency>
 
