@@ -19,3 +19,4 @@ logs/
 config.json
 latest.log
 ssl/
+dependency-reduced-pom.xml
