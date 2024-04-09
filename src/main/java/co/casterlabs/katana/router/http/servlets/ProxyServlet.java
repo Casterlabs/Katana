@@ -160,6 +160,9 @@ public class ProxyServlet extends HttpServlet {
         @JsonField("follow_redirects")
         public boolean followRedirects = false;
 
+        @JsonField("solve_for_ip")
+        public boolean solveForIp = false;
+
         @JsonValidate
         private void $validate() {
             assert this.proxyUrl != null : "The `proxy_url` option must be set.";
@@ -170,6 +173,21 @@ public class ProxyServlet extends HttpServlet {
 
     private String transformUrl(HttpSession session, boolean isWebSocket) {
         String url = this.config.proxyUrl;
+
+        if (this.config.solveForIp) {
+            String[] requested = session.getHost().substring(0, session.getHost().indexOf('.')).split("-");
+
+            String targetIp;
+            if (requested.length == 4) {
+                // IPv4
+                targetIp = String.join(".", requested);
+            } else {
+                // IPv6
+                targetIp = "[" + String.join(":", requested) + "]";
+            }
+
+            url = url.replace("{ip}", targetIp);
+        }
 
         // Remap http urls to websocket urls and vice versa.
         if (isWebSocket) {
