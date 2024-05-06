@@ -327,6 +327,7 @@ public class ProxyServlet extends HttpServlet {
 
                 if (key.equalsIgnoreCase("Transfer-Encoding") ||
                     key.equalsIgnoreCase("Content-Length") ||
+                    key.equalsIgnoreCase("Content-Encoding") ||
                     key.equalsIgnoreCase("Content-Type")) {
                     continue;
                 }
