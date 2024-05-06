@@ -61,6 +61,7 @@ import okio.Okio;
 
 public class ProxyServlet extends HttpServlet {
     private static final List<String> DISALLOWED_HEADERS = Arrays.asList(
+        "accept-encoding",
         "connection",
         "keep-alive",
         "proxy-authenticate",
@@ -299,8 +300,6 @@ public class ProxyServlet extends HttpServlet {
                 new ResponseContent() {
                     @Override
                     public void write(OutputStream out) throws IOException {
-                        // Automatically uses the content length or 16MB for the IO buffer, whichever is
-                        // smallest.
                         StreamUtil.streamTransfer(
                             responseStream,
                             out,
