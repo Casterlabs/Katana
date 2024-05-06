@@ -24,7 +24,8 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.Nullable;
 
-import co.casterlabs.commons.async.PromiseWithHandles;
+import co.casterlabs.commons.async.promise.Promise;
+import co.casterlabs.commons.async.promise.PromiseResolver;
 import co.casterlabs.commons.io.streams.StreamUtil;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.router.http.HttpRouter;
@@ -361,13 +362,10 @@ public class ProxyServlet extends HttpServlet {
 
         return new WebsocketListener() {
             private RemoteWebSocketConnection remote;
-            private PromiseWithHandles<Void> connectPromise = new PromiseWithHandles<>();
+            private PromiseResolver<Void> connectPromiseResolver = Promise.withResolvers();
 
             @Override
             public void onOpen(Websocket websocket) {
-                this.connectPromise.except((t) -> {
-                }); // SILENCE.
-
                 try {
                     this.remote = new RemoteWebSocketConnection(uri, websocket, session.getHeaders());
 
@@ -381,9 +379,9 @@ public class ProxyServlet extends HttpServlet {
                     } else {
                         throw new IOException("Couldn't connect to proxy target.");
                     }
-                    this.connectPromise.resolve(null);
+                    this.connectPromiseResolver.resolve();
                 } catch (Throwable t) {
-                    this.connectPromise.reject(new DropConnectionException());
+                    this.connectPromiseResolver.reject(new DropConnectionException());
                     websocket.getSession().getLogger().severe("An error occurred whilst connecting to target (serving %s): \n%s", uri, t);
                     try {
                         websocket.close();
@@ -395,7 +393,7 @@ public class ProxyServlet extends HttpServlet {
             @Override
             public void onText(Websocket websocket, String message) {
                 try {
-                    this.connectPromise.await();
+                    this.connectPromiseResolver.promise.await();
                     this.remote.send(message);
                 } catch (DropConnectionException e) {
                     // NOOP
@@ -409,7 +407,7 @@ public class ProxyServlet extends HttpServlet {
             @Override
             public void onBinary(Websocket websocket, byte[] bytes) {
                 try {
-                    this.connectPromise.await();
+                    this.connectPromiseResolver.promise.await();
                     this.remote.send(bytes);
                 } catch (DropConnectionException e) {
                     // NOOP
@@ -424,7 +422,7 @@ public class ProxyServlet extends HttpServlet {
                 session.getLogger().debug("Closed websocket.");
                 if (!this.remote.isClosing() || !this.remote.isClosed()) {
                     try {
-                        this.connectPromise.await();
+                        this.connectPromiseResolver.promise.await();
                         this.remote.close();
                     } catch (Throwable ignored) {}
                 }
