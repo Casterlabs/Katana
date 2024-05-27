@@ -70,9 +70,8 @@ public class Katana {
                 case HTTP: {
                     try {
                         HttpRouterConfiguration config = Rson.DEFAULT.fromJson(configElement, HttpRouterConfiguration.class);
-                        updatedResult.add(Rson.DEFAULT.toJson(config));
-
                         this.addHttpConfiguration(config);
+                        updatedResult.add(Rson.DEFAULT.toJson(config));
                     } catch (Exception e) {
                         updatedResult.add(element); // Add back the raw json, let the user fix it.
                         this.logger.severe("An exception occurred whilst loading config:\n%s", e);
