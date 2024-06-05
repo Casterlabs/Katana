@@ -1,5 +1,6 @@
 package co.casterlabs.katana;
 
+import java.io.Closeable;
 import java.io.File;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -7,26 +8,30 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import lombok.AllArgsConstructor;
+import co.casterlabs.commons.async.AsyncTask;
+import lombok.RequiredArgsConstructor;
+import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 //Modified from: https://stackoverflow.com/questions/16251273/can-i-watch-for-single-file-change-with-watchservice-not-the-whole-directory
-@AllArgsConstructor
-public abstract class FileWatcher extends Thread {
-    private File file;
+@RequiredArgsConstructor
+public abstract class FileWatcher implements Closeable {
+    private final File file;
+    private boolean shouldWatch;
 
     public abstract void onChange();
 
     @SuppressWarnings("unchecked")
-    @Override
-    public void run() {
+    private final void run() {
         try (WatchService watcher = FileSystems.getDefault().newWatchService()) {
             Path path = this.file.getCanonicalFile().getParentFile().toPath();
             path.register(watcher, StandardWatchEventKinds.ENTRY_MODIFY);
 
-            while (true) {
-                WatchKey key = watcher.poll(25, TimeUnit.MILLISECONDS);
+            while (this.shouldWatch) {
+                WatchKey key = watcher.poll(100, TimeUnit.MILLISECONDS);
 
                 if (key == null) {
                     Thread.yield();
@@ -52,8 +57,65 @@ public abstract class FileWatcher extends Thread {
                 }
             }
         } catch (Throwable e) {
-            e.printStackTrace();
+            FastLogger.logException(e);
         }
+    }
+
+    @Override
+    public final int hashCode() {
+        return this.file.hashCode();
+    }
+
+    public final void start() {
+        if (this.shouldWatch) return;
+        this.shouldWatch = true;
+        AsyncTask.create(this::run);
+    }
+
+    @Override
+    public final void close() {
+        this.shouldWatch = false;
+    }
+
+    public static abstract class MultiFileWatcher implements Closeable {
+        private final Map<FileWatcher, Boolean> sub = new HashMap<>();
+
+        public MultiFileWatcher(File... files) {
+            for (File file : files) {
+                this.sub.put(
+                    new FileWatcher(file) {
+                        @Override
+                        public void onChange() {
+                            sub.put(this, true);
+                            checkAllForChange();
+                        }
+                    },
+                    false
+                );
+            }
+        }
+
+        private final void checkAllForChange() {
+            for (boolean b : this.sub.values()) {
+                if (!b) return; // Hasn't changed yet.
+            }
+
+            this.sub.keySet().forEach((w) -> this.sub.put(w, false)); // Update all to false.
+            this.onChange();
+        }
+
+        public abstract void onChange();
+
+        public final void start() {
+            this.sub.keySet().forEach((w) -> w.start());
+        }
+
+        @Override
+        public final void close() {
+            this.sub.keySet().forEach((w) -> w.close());
+            this.sub.keySet().forEach((w) -> this.sub.put(w, false)); // Update all to false.
+        }
+
     }
 
 }
