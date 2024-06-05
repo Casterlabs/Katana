@@ -1,11 +1,13 @@
 package co.casterlabs.katana.router.http;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
@@ -14,6 +16,9 @@ import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.collections4.multimap.ArrayListValuedHashMap;
 import org.jetbrains.annotations.Nullable;
 
+import co.casterlabs.commons.async.AsyncTask;
+import co.casterlabs.katana.CertificateAutoIssuer;
+import co.casterlabs.katana.CertificateAutoIssuer.IssuanceException;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.router.KatanaRouter;
@@ -83,6 +88,28 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
 
         HttpSSLConfiguration ssl = this.config.getSSL();
         if ((ssl != null) && ssl.enabled) {
+            if (ssl.certAutoIssuer != null && ssl.certAutoIssuer.enabled) {
+                if (config.getPort() != 80) {
+                    this.logger.warn("ACME will only validate certificate requests on port 80. I hope you know what you are doing...");
+                }
+
+                CertificateAutoIssuer.setup(ssl);
+
+                if (!new File(ssl.privateKeyFile).exists() || !new File(ssl.certificateFile).exists() || !new File(ssl.trustChainFile).exists()) {
+                    // Uh oh, we don't have a cert _at all_. We need to spin up the server to
+                    // perform validation and clean up.
+
+                    this.logger.warn("Temporarily starting server on port %d to issue certificates.", this.server.getPort());
+                    this.server.start();
+                    try {
+                        this.autoIssueCertificates();
+                        this.logger.info("The day has been saved! Shutting down the server until we're ready to actually serve requests :^)");
+                    } finally {
+                        this.stop();
+                    }
+                }
+            }
+
             X509ExtendedKeyManager keyManager = PemUtils.loadIdentityMaterial(Paths.get(ssl.trustChainFile), Paths.get(ssl.privateKeyFile));
             X509ExtendedTrustManager trustManager = PemUtils.loadTrustMaterial(Paths.get(ssl.certificateFile));
 
@@ -101,9 +128,22 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
                 .buildSecure(this);
 
             this.serverLoggers.add(this.serverSecure.getLogger());
+
+            AsyncTask.create(() -> {
+                // TODO loop over the certificates once a month and check for expired ones.
+            });
+
+            // TODO a FileWatcher to hot reload certificates.
         }
 
         this.loadConfig(this.config);
+    }
+
+    private void autoIssueCertificates() throws IssuanceException {
+        if (this.config.getSSL().certAutoIssuer == null || !this.config.getSSL().certAutoIssuer.enabled) return;
+        Set<String> frontFacing = this.config.getAllFrontFacingDomains();
+        frontFacing.remove("*"); // This won't work :P
+        CertificateAutoIssuer.reissue(frontFacing);
     }
 
     @Override
@@ -161,6 +201,22 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
     @Override
     public @Nullable HttpResponse serveHttpSession(@NonNull HttpSession session) {
         try {
+            // This one's special! It needs to always bypass SSL redirects.
+            if (session.getUri().startsWith("/.well-known/acme-challenge/")) {
+                String token = session.getUri().substring("/.well-known/acme-challenge/".length());
+                String challenge = CertificateAutoIssuer.activeChallenges.get(token);
+
+                if (challenge == null) {
+                    return HttpResponse
+                        .newFixedLengthResponse(StandardHttpStatus.NOT_FOUND, "acme challenge not found")
+                        .setMimeType("text/plain");
+                } else {
+                    return HttpResponse
+                        .newFixedLengthResponse(StandardHttpStatus.OK, challenge)
+                        .setMimeType("text/plain");
+                }
+            }
+
             if ((session.getTLSVersion() == null) && (!this.allowInsecure || this.forceHttps)) {
                 if (this.forceHttps) {
                     session.getLogger().info("Redirected from http -> https.");

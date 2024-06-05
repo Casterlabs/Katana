@@ -1,8 +1,11 @@
 package co.casterlabs.katana.router.http;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import co.casterlabs.katana.CertificateAutoIssuer.IssueMethod;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.router.KatanaRouterConfiguration;
 import co.casterlabs.katana.router.http.servlets.HttpServlet;
@@ -159,6 +162,14 @@ public class HttpRouterConfiguration implements KatanaRouterConfiguration {
         return arr;
     }
 
+    public Set<String> getAllFrontFacingDomains() {
+        Set<String> domains = new HashSet<>();
+        for (HttpServlet s : this.servlets) {
+            domains.addAll(s.getHostnames());
+        }
+        return domains;
+    }
+
     @JsonClass(exposeAll = true)
     public static class HttpSSLConfiguration extends SSLConfiguration {
         public int port = 443;
@@ -167,6 +178,20 @@ public class HttpRouterConfiguration implements KatanaRouterConfiguration {
         public boolean allowInsecure = true;
 
         public boolean force = false;
+
+        @JsonField("certificate_auto_issuer")
+        public HttpSSLAutoIssueConfiguration certAutoIssuer = new HttpSSLAutoIssueConfiguration();
+
+    }
+
+    @JsonClass(exposeAll = true)
+    public static class HttpSSLAutoIssueConfiguration {
+        public boolean enabled = false;
+
+        @JsonField("account_email")
+        public String accountEmail = "letsencrypt@example.com";
+
+        public IssueMethod method = IssueMethod.HTTP;
 
     }
 
