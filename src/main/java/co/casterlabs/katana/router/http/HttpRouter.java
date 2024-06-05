@@ -3,11 +3,18 @@ package co.casterlabs.katana.router.http;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.X509Certificate;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.X509ExtendedKeyManager;
 import javax.net.ssl.X509ExtendedTrustManager;
@@ -19,6 +26,7 @@ import org.jetbrains.annotations.Nullable;
 import co.casterlabs.commons.async.AsyncTask;
 import co.casterlabs.katana.CertificateAutoIssuer;
 import co.casterlabs.katana.CertificateAutoIssuer.IssuanceException;
+import co.casterlabs.katana.FileWatcher.MultiFileWatcher;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.router.KatanaRouter;
@@ -41,6 +49,9 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 import nl.altindag.ssl.SSLFactory;
 import nl.altindag.ssl.pem.util.PemUtils;
+import nl.altindag.ssl.util.KeyManagerUtils;
+import nl.altindag.ssl.util.SSLSessionUtils;
+import nl.altindag.ssl.util.TrustManagerUtils;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 
@@ -62,6 +73,11 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
     private HttpServer server;
 
     private List<FastLogger> serverLoggers = new ArrayList<>();
+
+    private SSLFactory factory;
+    private AsyncTask certificateChecker;
+    private MultiFileWatcher certificateWatcher;
+    private boolean canAutoRenew = false;
 
     static {
         List<String> methods = new ArrayList<>();
@@ -108,12 +124,23 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
                         this.stop();
                     }
                 }
+
+                this.canAutoRenew = true;
             }
 
-            X509ExtendedKeyManager keyManager = PemUtils.loadIdentityMaterial(Paths.get(ssl.trustChainFile), Paths.get(ssl.privateKeyFile));
-            X509ExtendedTrustManager trustManager = PemUtils.loadTrustMaterial(Paths.get(ssl.certificateFile));
+            X509ExtendedKeyManager keyManager = KeyManagerUtils.createSwappableKeyManager(
+                PemUtils.loadIdentityMaterial(
+                    Paths.get(ssl.trustChainFile),
+                    Paths.get(ssl.privateKeyFile)
+                )
+            );
+            X509ExtendedTrustManager trustManager = TrustManagerUtils.createSwappableTrustManager(
+                PemUtils.loadTrustMaterial(
+                    Paths.get(ssl.certificateFile)
+                )
+            );
 
-            SSLFactory factory = SSLFactory.builder()
+            this.factory = SSLFactory.builder()
                 .withIdentityMaterial(keyManager)
                 .withTrustMaterial(trustManager)
                 .withCiphers(ssl.enabledCipherSuites) // Unsupported ciphers are automatically excluded.
@@ -124,16 +151,34 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
             this.forceHttps = ssl.force;
             this.serverSecure = builder
                 .withPort(ssl.port)
-                .withSsl(factory)
+                .withSsl(this.factory)
                 .buildSecure(this);
 
             this.serverLoggers.add(this.serverSecure.getLogger());
 
-            AsyncTask.create(() -> {
-                // TODO loop over the certificates once a month and check for expired ones.
-            });
+            this.certificateWatcher = new MultiFileWatcher(new File(ssl.trustChainFile), new File(ssl.privateKeyFile), new File(ssl.certificateFile)) {
+                @Override
+                public void onChange() {
+                    try {
+                        TimeUnit.SECONDS.sleep(5);
+                        logger.info("Detected change in certificates. Reloading SSL...");
+                        X509ExtendedKeyManager keyManager = PemUtils.loadIdentityMaterial(
+                            Paths.get(ssl.trustChainFile),
+                            Paths.get(ssl.privateKeyFile)
+                        );
+                        X509ExtendedTrustManager trustManager = PemUtils.loadTrustMaterial(
+                            Paths.get(ssl.certificateFile)
+                        );
 
-            // TODO a FileWatcher to hot reload certificates.
+                        KeyManagerUtils.swapKeyManager(factory.getKeyManager().get(), keyManager);
+                        TrustManagerUtils.swapTrustManager(factory.getTrustManager().get(), trustManager);
+                        SSLSessionUtils.invalidateCaches(factory.getSslContext());
+                        logger.info("SSL reloaded successfully!");
+                    } catch (Throwable t) {
+                        logger.fatal("Could not reload certificates:\n%s", t);
+                    }
+                }
+            };
         }
 
         this.loadConfig(this.config);
@@ -182,11 +227,61 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
             this.server.start();
             this.logger.info("Started server on port %d.", this.server.getPort());
         }
+        if (this.certificateWatcher != null) {
+            this.certificateWatcher.start();
+        }
+        if (this.canAutoRenew) {
+            this.certificateChecker = AsyncTask.create(() -> {
+                final Date MONTH_FROM_NOW = Date.from(Instant.now().plus(28, ChronoUnit.DAYS));
+
+                while (true) {
+                    try {
+                        TimeUnit.HOURS.sleep(8);
+                    } catch (InterruptedException ignored) {
+                        return;
+                    }
+
+                    X509ExtendedKeyManager keyManager = this.factory.getKeyManager().get();
+                    String[] aliases = keyManager.getClientAliases("RSA", null);
+
+                    boolean certsGoingToExpire = false;
+                    for (String alias : aliases) {
+                        X509Certificate[] chain = keyManager.getCertificateChain(alias);
+                        for (X509Certificate cert : chain) {
+                            try {
+                                cert.checkValidity(MONTH_FROM_NOW);
+                            } catch (CertificateExpiredException e) {
+                                certsGoingToExpire = true;
+                            } catch (CertificateNotYetValidException ignored) {}
+                        }
+                    }
+
+                    if (!certsGoingToExpire) {
+                        continue; // We'll check again in a little bit.
+                    }
+
+                    try {
+                        logger.info("Certificates are going to expire! Renewing automagically...");
+                        this.autoIssueCertificates();
+                        logger.info("Certificates renewed successfully! Auto swapping them in a few seconds.");
+                    } catch (IssuanceException e) {
+                        logger.fatal("Couldn't renew certificate. This is bad!\n%s", e);
+                    }
+                }
+            });
+        }
     }
 
     @SneakyThrows
     @Override
     public void stop() {
+        if (this.certificateChecker != null) {
+            this.certificateChecker.cancel();
+            this.certificateChecker = null;
+        }
+        if (this.certificateWatcher != null) {
+            this.certificateWatcher.close();
+        }
         if (this.serverSecure != null) {
             this.serverSecure.stop();
             this.logger.info("Stopped secure server on port %d.", this.serverSecure.getPort());
