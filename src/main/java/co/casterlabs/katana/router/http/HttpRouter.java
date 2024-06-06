@@ -75,9 +75,9 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
     private List<FastLogger> serverLoggers = new ArrayList<>();
 
     private SSLFactory factory;
-    private AsyncTask certificateChecker;
     private MultiFileWatcher certificateWatcher;
-    private boolean canAutoRenew = false;
+    private CertificateAutoIssuer autoIssuer;
+    private AsyncTask certificateChecker;
 
     static {
         List<String> methods = new ArrayList<>();
@@ -109,7 +109,7 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
                     this.logger.warn("ACME will only validate certificate requests on port 80. I hope you know what you are doing...");
                 }
 
-                CertificateAutoIssuer.setup(ssl);
+                this.autoIssuer = new CertificateAutoIssuer(ssl);
 
                 if (!new File(ssl.privateKeyFile).exists() || !new File(ssl.certificateFile).exists() || !new File(ssl.trustChainFile).exists()) {
                     // Uh oh, we don't have a cert _at all_. We need to spin up the server to
@@ -124,8 +124,6 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
                         this.stop();
                     }
                 }
-
-                this.canAutoRenew = true;
             }
 
             X509ExtendedKeyManager keyManager = KeyManagerUtils.createSwappableKeyManager(
@@ -185,10 +183,10 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
     }
 
     private void autoIssueCertificates() throws IssuanceException {
-        if (this.config.getSSL().certAutoIssuer == null || !this.config.getSSL().certAutoIssuer.enabled) return;
+        if (this.autoIssuer == null) return;
         Set<String> frontFacing = this.config.getAllFrontFacingDomains();
         frontFacing.remove("*"); // This won't work :P
-        CertificateAutoIssuer.reissue(frontFacing);
+        this.autoIssuer.reissue(frontFacing);
     }
 
     @Override
@@ -230,7 +228,7 @@ public class HttpRouter implements HttpListener, KatanaRouter<HttpRouterConfigur
         if (this.certificateWatcher != null) {
             this.certificateWatcher.start();
         }
-        if (this.canAutoRenew) {
+        if (this.autoIssuer == null) {
             this.certificateChecker = AsyncTask.create(() -> {
                 final Date MONTH_FROM_NOW = Date.from(Instant.now().plus(28, ChronoUnit.DAYS));
 

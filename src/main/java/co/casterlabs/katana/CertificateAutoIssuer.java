@@ -52,18 +52,17 @@ public class CertificateAutoIssuer {
     public static final Object AGREE_LOCK = new Object();
     public static final Map<String, String> activeChallenges = new HashMap<>();
 
-    private static HttpSSLConfiguration config;
-    private static Session session;
-    private static Account account;
     private static KeyPair userKey;
     private static KeyPair domainKey;
+    private static Session session;
+    private static Account account;
 
-    static {
+    private HttpSSLConfiguration config;
+
+    private static void setupIfNotAlready(HttpSSLConfiguration emailSource) throws AcmeException, IOException, InterruptedException {
+        if (session != null) return;
+
         Security.addProvider(new BouncyCastleProvider());
-    }
-
-    public static void setup(HttpSSLConfiguration config) throws IOException, AcmeException, InterruptedException {
-        CertificateAutoIssuer.config = config;
 
         if (CA_KEY.exists()) {
             // If there is a key file, read it
@@ -100,8 +99,8 @@ public class CertificateAutoIssuer {
                 .agreeToTermsOfService()
                 .useKeyPair(userKey);
 
-            if (config.certAutoIssuer.accountEmail != null) {
-                accountBuilder.addEmail(config.certAutoIssuer.accountEmail);
+            if (emailSource.certAutoIssuer.accountEmail != null) {
+                accountBuilder.addEmail(emailSource.certAutoIssuer.accountEmail);
             }
 
             // TODO Use the KID and HMAC if the CA uses External Account Binding
@@ -125,7 +124,12 @@ public class CertificateAutoIssuer {
         }
     }
 
-    public static synchronized void reissue(Set<String> domains) throws IssuanceException {
+    public CertificateAutoIssuer(HttpSSLConfiguration config) throws IOException, AcmeException, InterruptedException {
+        this.config = config;
+        setupIfNotAlready(config);
+    }
+
+    public synchronized void reissue(Set<String> domains) throws IssuanceException {
         if (config.certAutoIssuer.method == IssueMethod.HTTP) {
             for (String domain : domains) {
                 if (domain.contains("*")) {
