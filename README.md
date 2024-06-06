@@ -28,7 +28,7 @@ Read the [wiki](https://github.com/Casterlabs/Katana/wiki) to learn how to confi
 
 ### Casterlabs (Us!)
 
-We've built Katana to handle our http infrastructure and to expose our API services to the web. With Katana, we serve 1.6M requests a month totalling 240GB.
+We've built Katana to handle our http infrastructure and to expose our API services to the web. With Katana, we serve 5.9M HTTP requests and 1.2M WebSocket sessions a month totalling 4.3TB.
 
 ### Other People
 
