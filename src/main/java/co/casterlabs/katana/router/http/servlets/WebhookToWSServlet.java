@@ -138,7 +138,12 @@ public class WebhookToWSServlet extends HttpServlet {
 
     @Override
     public WebsocketListener serveWebsocket(WebsocketSession session, HttpRouter router) {
-        // If the path + secret doesn't match don't handle.
+        // If the path doesn't match don't handle.
+        if (!session.getUri().startsWith(this.config.path)) {
+            return null;
+        }
+
+        // If the secret doesn't match don't handle.
         if (!session.getUri().startsWith(this.config.path + '/' + this.config.websocketSecret)) {
             throw new DropConnectionException();
         }
