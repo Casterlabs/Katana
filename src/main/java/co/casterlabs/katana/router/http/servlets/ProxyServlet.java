@@ -36,6 +36,7 @@ import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
+import co.casterlabs.rhs.protocol.HttpMethod;
 import co.casterlabs.rhs.protocol.HttpStatus;
 import co.casterlabs.rhs.server.HttpResponse;
 import co.casterlabs.rhs.server.HttpResponse.ResponseContent;
@@ -246,7 +247,7 @@ public class ProxyServlet extends HttpServlet {
 
         RequestBody body = null;
 
-        if (session.hasBody()) {
+        if (session.hasBody() && session.getMethod() != HttpMethod.GET) {
             body = new RequestBody() {
                 @Override
                 public MediaType contentType() {
