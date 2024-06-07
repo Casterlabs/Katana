@@ -23,7 +23,8 @@ public abstract class HttpServlet {
         "PROXY", ProxyServlet.class,
         "REDIRECT", RedirectServlet.class,
         "FILE", FileServlet.class,
-        "ECHO", EchoServlet.class
+        "ECHO", EchoServlet.class,
+        "WEBHOOK_TO_WS", WebhookToWSServlet.class
     );
 
     private Set<String> corsAllowedHosts = new HashSet<>();
