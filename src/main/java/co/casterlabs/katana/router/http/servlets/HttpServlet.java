@@ -8,10 +8,10 @@ import co.casterlabs.katana.router.http.HttpRouter;
 import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
-import co.casterlabs.rhs.server.HttpResponse;
-import co.casterlabs.rhs.session.HttpSession;
-import co.casterlabs.rhs.session.WebsocketListener;
-import co.casterlabs.rhs.session.WebsocketSession;
+import co.casterlabs.rhs.protocol.http.HttpResponse;
+import co.casterlabs.rhs.protocol.http.HttpSession;
+import co.casterlabs.rhs.protocol.websocket.WebsocketResponse;
+import co.casterlabs.rhs.protocol.websocket.WebsocketSession;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
@@ -46,7 +46,7 @@ public abstract class HttpServlet {
     }
 
     /* Override */
-    public WebsocketListener serveWebsocket(WebsocketSession session, HttpRouter router) {
+    public WebsocketResponse serveWebsocket(WebsocketSession session, HttpRouter router) {
         return null;
     }
 

@@ -8,6 +8,6 @@ public interface KatanaRouter<T extends KatanaRouterConfiguration> {
 
     public void start();
 
-    public void stop();
+    public void stop(boolean disconnectClients);
 
 }

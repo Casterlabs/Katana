@@ -2,7 +2,7 @@ package co.casterlabs.katana.router;
 
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.annotating.JsonField;
-import co.casterlabs.rhs.session.TLSVersion;
+import co.casterlabs.rhs.TLSVersion;
 
 public interface KatanaRouterConfiguration {
 

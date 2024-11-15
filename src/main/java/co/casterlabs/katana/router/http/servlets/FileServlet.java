@@ -2,17 +2,17 @@ package co.casterlabs.katana.router.http.servlets;
 
 import java.io.File;
 
-import co.casterlabs.katana.router.http.FileUtil;
 import co.casterlabs.katana.router.http.HttpRouter;
+import co.casterlabs.katana.router.http.HttpUtil;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
-import co.casterlabs.rhs.protocol.StandardHttpStatus;
-import co.casterlabs.rhs.server.HttpResponse;
-import co.casterlabs.rhs.session.HttpSession;
+import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
+import co.casterlabs.rhs.protocol.http.HttpResponse;
+import co.casterlabs.rhs.protocol.http.HttpSession;
 import lombok.Getter;
 import lombok.SneakyThrows;
 
@@ -49,25 +49,25 @@ public class FileServlet extends HttpServlet {
     @SneakyThrows
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
-        if (!session.getUri().matches(this.config.path)) {
+        if (!session.uri().path.matches(this.config.path)) {
             return null;
         }
 
-        File file = new File(this.config.file);
-
         try {
+            File file = new File(this.config.file);
+
             if (file.exists() && file.isFile()) {
 //                if (this.config.useMiki && FileUtil.isMiki(file)) {
 //                    return FileUtil.serveMiki(session, file, StandardHttpStatus.OK);
 //                } else {
-                return FileUtil.serveFile(file, session);
+                return HttpResponse.newRangedFileResponse(session, StandardHttpStatus.OK, file);
 //                }
             }
 
-            return HttpRouter.errorResponse(session, StandardHttpStatus.NOT_FOUND, "File not found.", router.getConfig());
+            return HttpUtil.errorResponse(session, StandardHttpStatus.NOT_FOUND, "File not found.");
         } catch (Exception e) {
             e.printStackTrace();
-            return HttpRouter.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Unable to read file.", router.getConfig());
+            return HttpUtil.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "Unable to read file.");
         }
     }
 

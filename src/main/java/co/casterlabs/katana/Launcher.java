@@ -55,6 +55,14 @@ public class Launcher implements Runnable {
         this.loadConfig(katana);
 
         katana.start();
+
+        Thread.ofPlatform()
+            .name("Katana JVM Keep-Alive")
+            .start(() -> {
+                try {
+                    Thread.sleep(Long.MAX_VALUE);
+                } catch (InterruptedException ignored) {}
+            });
     }
 
     @SneakyThrows

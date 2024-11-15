@@ -1,5 +1,6 @@
 package co.casterlabs.katana.router.http.servlets;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map.Entry;
 
@@ -9,12 +10,14 @@ import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
-import co.casterlabs.rhs.protocol.StandardHttpStatus;
-import co.casterlabs.rhs.server.HttpResponse;
-import co.casterlabs.rhs.session.HttpSession;
-import co.casterlabs.rhs.session.Websocket;
-import co.casterlabs.rhs.session.WebsocketListener;
-import co.casterlabs.rhs.session.WebsocketSession;
+import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
+import co.casterlabs.rhs.protocol.http.HeaderValue;
+import co.casterlabs.rhs.protocol.http.HttpResponse;
+import co.casterlabs.rhs.protocol.http.HttpSession;
+import co.casterlabs.rhs.protocol.websocket.Websocket;
+import co.casterlabs.rhs.protocol.websocket.WebsocketListener;
+import co.casterlabs.rhs.protocol.websocket.WebsocketResponse;
+import co.casterlabs.rhs.protocol.websocket.WebsocketSession;
 import lombok.Getter;
 import lombok.SneakyThrows;
 
@@ -41,83 +44,65 @@ public class EchoServlet extends HttpServlet {
 
         request.append(
             String.format(
-                "%s %s%s\n\n",
-                session.getMethod(), session.getUri(), session.getQueryString()
+                "%s %s\n\n",
+                session.method(), session.uri().rawPath
             )
         );
 
-        for (Entry<String, List<String>> header : session.getHeaders().entrySet()) {
+        for (Entry<String, List<HeaderValue>> header : session.headers().entrySet()) {
             String key = header.getKey().toLowerCase();
-            for (String value : header.getValue()) {
-                request.append(String.format("%s: %s\n", key, value));
+            for (HeaderValue value : header.getValue()) {
+                request.append(String.format("%s: %s\n", key, value.raw()));
             }
         }
 
-        if (session.hasBody()) {
+        if (session.body().present()) {
             request.append('\n');
-            request.append(session.getRequestBody());
+            request.append("<body content>");
         }
 
         return HttpResponse
             .newFixedLengthResponse(StandardHttpStatus.OK, request.toString())
-            .setMimeType("text/plain");
+            .mime("text/plain");
     }
 
     @Override
-    public WebsocketListener serveWebsocket(WebsocketSession session, HttpRouter router) {
-        return new WebsocketListener() {
-
-            @Override
-            public void onOpen(Websocket websocket) {
-                try {
+    public WebsocketResponse serveWebsocket(WebsocketSession session, HttpRouter router) {
+        return WebsocketResponse.accept(
+            new WebsocketListener() {
+                @Override
+                public void onOpen(Websocket websocket) throws IOException {
                     StringBuilder request = new StringBuilder();
 
                     request.append(
                         String.format(
-                            "%s %s%s\n\n",
-                            session.getMethod(), session.getUri(), session.getQueryString()
+                            "%s %s\n\n",
+                            session.method(), session.uri().rawPath
                         )
                     );
 
-                    for (Entry<String, List<String>> header : session.getHeaders().entrySet()) {
+                    for (Entry<String, List<HeaderValue>> header : session.headers().entrySet()) {
                         String key = header.getKey().toLowerCase();
-                        for (String value : header.getValue()) {
-                            request.append(String.format("%s: %s\n", key, value));
+                        for (HeaderValue value : header.getValue()) {
+                            request.append(String.format("%s: %s\n", key, value.raw()));
                         }
                     }
 
                     websocket.send(request.toString());
-                } catch (Throwable t) {
-                    session.getLogger().fatal(t);
                 }
-            }
 
-            @SneakyThrows
-            @Override
-            public void onText(Websocket websocket, String message) {
-                try {
+                @Override
+                public void onText(Websocket websocket, String message) throws IOException {
                     websocket.send(message);
-                } catch (Throwable t) {
-                    websocket.getSession().getLogger().fatal("An error occurred whilst sending message to target: %s", t);
-                    throw t;
                 }
-            }
 
-            @SneakyThrows
-            @Override
-            public void onBinary(Websocket websocket, byte[] bytes) {
-                try {
+                @Override
+                public void onBinary(Websocket websocket, byte[] bytes) throws IOException {
                     websocket.send(bytes);
-                } catch (Throwable t) {
-                    websocket.getSession().getLogger().fatal("An error occurred whilst sending message to target: %s", t);
-                    throw t;
                 }
-            }
-
-            @Override
-            public void onClose(Websocket websocket) {}
-
-        };
+            },
+            session.firstProtocol()
+        );
     }
 
 }

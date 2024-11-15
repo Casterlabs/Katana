@@ -9,9 +9,9 @@ import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
-import co.casterlabs.rhs.protocol.StandardHttpStatus;
-import co.casterlabs.rhs.server.HttpResponse;
-import co.casterlabs.rhs.session.HttpSession;
+import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
+import co.casterlabs.rhs.protocol.http.HttpResponse;
+import co.casterlabs.rhs.protocol.http.HttpSession;
 import lombok.Getter;
 
 public class RedirectServlet extends HttpServlet {
@@ -45,17 +45,17 @@ public class RedirectServlet extends HttpServlet {
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         String redirectUrl = this.config.redirectUrl;
-        if (this.config.includePath) redirectUrl += session.getUri();
+        if (this.config.includePath) redirectUrl += session.uri().rawPath;
 
-        session.getLogger().debug("Redirecting to: %s", redirectUrl);
+        session.logger().debug("Redirecting to: %s", redirectUrl);
 
         String escaped_redirectUrl = Util.escapeHtml(redirectUrl);
         return HttpResponse.newFixedLengthResponse(
             StandardHttpStatus.TEMPORARY_REDIRECT,
             "<!DOCTYPE html><html><a href=\"" + escaped_redirectUrl + "\">" + escaped_redirectUrl + "</a></html>"
         )
-            .putHeader("Location", redirectUrl)
-            .setMimeType("text/html");
+            .mime("text/html")
+            .header("Location", redirectUrl);
     }
 
 }

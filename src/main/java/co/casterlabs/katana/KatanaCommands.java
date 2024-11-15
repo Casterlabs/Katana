@@ -29,8 +29,9 @@ public class KatanaCommands implements CommandListener<Void> {
 
     @Command(name = "reload", description = "Reloads the config, optionally terminating all connections with the \"no-preserve\" option.")
     public void reload(CommandEvent<Void> event) {
-        if ((event.getArgs().length > 0) && event.getArgs()[0].equalsIgnoreCase("no-preserve")) {
-            this.katana.stop();
+        boolean noPreserve = (event.getArgs().length > 0) && event.getArgs()[0].equalsIgnoreCase("no-preserve");
+        if (noPreserve) {
+            this.katana.stop(true);
             this.katana.start();
         }
 
@@ -38,9 +39,11 @@ public class KatanaCommands implements CommandListener<Void> {
         this.katana.getLogger().info("Reloaded config!");
     }
 
-    @Command(name = "stop", description = "Stops all listening servers.")
+    @Command(name = "stop", description = "Stops all listening servers, optionally terminating all connections with the \"no-preserve\" option.")
     public void stop(CommandEvent<Void> event) {
-        this.katana.stop();
+        boolean noPreserve = (event.getArgs().length > 0) && event.getArgs()[0].equalsIgnoreCase("no-preserve");
+
+        this.katana.stop(noPreserve);
     }
 
     @Command(name = "start", description = "Starts all registered servers.")

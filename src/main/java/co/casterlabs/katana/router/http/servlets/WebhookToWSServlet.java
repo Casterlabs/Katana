@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -23,15 +24,17 @@ import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
-import co.casterlabs.rhs.protocol.HttpMethod;
-import co.casterlabs.rhs.protocol.HttpStatus;
-import co.casterlabs.rhs.protocol.StandardHttpStatus;
-import co.casterlabs.rhs.server.HttpResponse;
-import co.casterlabs.rhs.session.HttpSession;
-import co.casterlabs.rhs.session.Websocket;
-import co.casterlabs.rhs.session.WebsocketListener;
-import co.casterlabs.rhs.session.WebsocketSession;
-import co.casterlabs.rhs.util.DropConnectionException;
+import co.casterlabs.rhs.HttpMethod;
+import co.casterlabs.rhs.HttpStatus;
+import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
+import co.casterlabs.rhs.protocol.DropConnectionException;
+import co.casterlabs.rhs.protocol.http.HeaderValue;
+import co.casterlabs.rhs.protocol.http.HttpResponse;
+import co.casterlabs.rhs.protocol.http.HttpSession;
+import co.casterlabs.rhs.protocol.websocket.Websocket;
+import co.casterlabs.rhs.protocol.websocket.WebsocketListener;
+import co.casterlabs.rhs.protocol.websocket.WebsocketResponse;
+import co.casterlabs.rhs.protocol.websocket.WebsocketSession;
 import lombok.Getter;
 import lombok.SneakyThrows;
 
@@ -74,11 +77,11 @@ public class WebhookToWSServlet extends HttpServlet {
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         // If the path doesn't match don't handle.
-        if (!session.getUri().startsWith(this.config.path)) {
+        if (!session.uri().path.startsWith(this.config.path)) {
             return null;
         }
 
-        if (!this.config.allowedMethods.contains(session.getMethod())) {
+        if (!this.config.allowedMethods.contains(session.method())) {
             return HttpResponse.newFixedLengthResponse(StandardHttpStatus.METHOD_NOT_ALLOWED, "Method not allowed.");
         }
 
@@ -94,11 +97,11 @@ public class WebhookToWSServlet extends HttpServlet {
         {
             JsonObject payloadJson = new JsonObject()
                 .put("request_id", requestId)
-                .put("method", session.getRawMethod())
-                .put("body_b64", Base64.getEncoder().encodeToString(session.getRequestBodyBytes()));
+                .put("method", session.rawMethod())
+                .put("body_b64", Base64.getEncoder().encodeToString(session.body().bytes()));
             JsonObject headers = new JsonObject();
-            for (Map.Entry<String, List<String>> entry : session.getHeaders().entrySet()) {
-                headers.put(entry.getKey(), entry.getValue().get(0));
+            for (Entry<String, List<HeaderValue>> entry : session.headers().entrySet()) {
+                headers.put(entry.getKey(), entry.getValue().get(0).raw());
             }
             payloadJson.put("headers", headers);
             payload = payloadJson.toString();
@@ -137,18 +140,18 @@ public class WebhookToWSServlet extends HttpServlet {
     }
 
     @Override
-    public WebsocketListener serveWebsocket(WebsocketSession session, HttpRouter router) {
+    public WebsocketResponse serveWebsocket(WebsocketSession session, HttpRouter router) {
         // If the path doesn't match don't handle.
-        if (!session.getUri().startsWith(this.config.path)) {
+        if (!session.uri().path.startsWith(this.config.path)) {
             return null;
         }
 
         // If the secret doesn't match don't handle.
-        if (!session.getUri().startsWith(this.config.path + '/' + this.config.websocketSecret)) {
+        if (!session.uri().path.startsWith(this.config.path + '/' + this.config.websocketSecret)) {
             throw new DropConnectionException();
         }
 
-        return new WebsocketListener() {
+        return WebsocketResponse.accept(new WebsocketListener() {
             @Override
             public void onOpen(Websocket websocket) {
                 List<Websocket> list = wsListeners.get(config.path);
@@ -170,7 +173,7 @@ public class WebhookToWSServlet extends HttpServlet {
 
                     resolver.resolve(result);
                 } catch (IOException e) {
-                    session.getLogger().exception(e);
+                    session.logger().exception(e);
                 } catch (IllegalStateException ignored) {}
             }
 
@@ -179,7 +182,7 @@ public class WebhookToWSServlet extends HttpServlet {
                 List<Websocket> list = wsListeners.get(config.path);
                 list.remove(websocket);
             }
-        };
+        }, session.firstProtocol());
     }
 
     @JsonClass(exposeAll = true)

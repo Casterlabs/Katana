@@ -16,7 +16,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.4.0</version>
+				<version>3.6.0</version>
 				<executions>
 					<execution>
 						<id>shade</id>
@@ -58,16 +58,16 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.8.1</version>
+				<version>3.13.0</version>
 				<configuration>
-					<source>11</source>
-					<target>11</target>
+					<source>21</source>
+					<target>21</target>
 				</configuration>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>3.1.0</version>
+				<version>3.3.1</version>
 				<configuration>
 					<finalName>${project.name}</finalName>
 				</configuration>
@@ -115,8 +115,8 @@
 		<!-- Http-Server -->
 		<dependency>
 			<groupId>co.casterlabs</groupId>
-			<artifactId>Rakurai-Http-Server</artifactId>
-			<version>2.1.8</version>
+			<artifactId>rakurai-http-server</artifactId>
+			<version>681df02</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -128,13 +128,13 @@
 		<dependency>
 			<groupId>io.github.hakky54</groupId>
 			<artifactId>sslcontext-kickstart</artifactId>
-			<version>8.3.5</version>
+			<version>8.3.7</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>io.github.hakky54</groupId>
 			<artifactId>sslcontext-kickstart-for-pem</artifactId>
-			<version>8.3.5</version>
+			<version>8.3.7</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -188,7 +188,19 @@
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>async</artifactId>
-			<version>1.7.0</version>
+			<version>1.8.0-1</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>co.casterlabs.commons</groupId>
+			<artifactId>functional</artifactId>
+			<version>1.8.0-1</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>co.casterlabs.commons</groupId>
+			<artifactId>io</artifactId>
+			<version>1.8.0-1</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>

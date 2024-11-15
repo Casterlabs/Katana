@@ -9,10 +9,9 @@ import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
@@ -27,7 +26,6 @@ import org.jetbrains.annotations.Nullable;
 import co.casterlabs.commons.async.promise.Promise;
 import co.casterlabs.commons.async.promise.PromiseResolver;
 import co.casterlabs.commons.io.streams.StreamUtil;
-import co.casterlabs.katana.Util;
 import co.casterlabs.katana.router.http.HttpRouter;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
@@ -36,18 +34,19 @@ import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
-import co.casterlabs.rhs.protocol.HttpMethod;
-import co.casterlabs.rhs.protocol.HttpStatus;
-import co.casterlabs.rhs.server.HttpResponse;
-import co.casterlabs.rhs.server.HttpResponse.ResponseContent;
-import co.casterlabs.rhs.session.HttpSession;
-import co.casterlabs.rhs.session.Websocket;
-import co.casterlabs.rhs.session.WebsocketListener;
-import co.casterlabs.rhs.session.WebsocketSession;
-import co.casterlabs.rhs.util.DropConnectionException;
-import co.casterlabs.rhs.util.HeaderMap;
+import co.casterlabs.rhs.HttpMethod;
+import co.casterlabs.rhs.HttpStatus;
+import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
+import co.casterlabs.rhs.protocol.http.HeaderValue;
+import co.casterlabs.rhs.protocol.http.HttpResponse;
+import co.casterlabs.rhs.protocol.http.HttpResponse.ResponseContent;
+import co.casterlabs.rhs.protocol.http.HttpSession;
+import co.casterlabs.rhs.protocol.http.Query;
+import co.casterlabs.rhs.protocol.websocket.Websocket;
+import co.casterlabs.rhs.protocol.websocket.WebsocketListener;
+import co.casterlabs.rhs.protocol.websocket.WebsocketResponse;
+import co.casterlabs.rhs.protocol.websocket.WebsocketSession;
 import kotlin.Pair;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.SneakyThrows;
 import okhttp3.Dns;
@@ -59,6 +58,7 @@ import okhttp3.RequestBody;
 import okhttp3.Response;
 import okio.BufferedSink;
 import okio.Okio;
+import xyz.e3ndr.fastloggingframework.logging.FastLogger;
 
 public class ProxyServlet extends HttpServlet {
     private static final List<String> DISALLOWED_HEADERS = Arrays.asList(
@@ -76,7 +76,6 @@ public class ProxyServlet extends HttpServlet {
         "upgrade",
         "sec-websocket-key",
         "sec-websocket-extensions",
-        "sec-websocket-protocol",
         "sec-websocket-version",
         "remote-addr",
         "http-client-ip",
@@ -178,7 +177,7 @@ public class ProxyServlet extends HttpServlet {
         String url = this.config.proxyUrl;
 
         if (this.config.solveForIp) {
-            String[] requested = session.getHost().substring(0, session.getHost().indexOf('.')).split("-");
+            String[] requested = session.uri().host.substring(0, session.uri().host.indexOf('.')).split("-");
 
             String targetIp;
             if (requested.length == 4) {
@@ -206,22 +205,24 @@ public class ProxyServlet extends HttpServlet {
         if (this.config.forwardHost) {
             // Replace the proxyUrl's host with the session's host. Look at the above DNS
             // logic to see what this does.
-            url = url.replaceFirst(this.proxyUrlHost, session.getHost());
-            session.getLogger().debug("Rewrote %s to %s, keep this in mind for the following messages.", this.proxyUrlHost, session.getHost());
+            url = url.replaceFirst(this.proxyUrlHost, session.uri().host);
+            session.logger().debug("Rewrote %s to %s, keep this in mind for the following messages.", this.proxyUrlHost, session.uri().host);
         }
 
         if (this.config.includePath) {
             String append;
 
             if (this.config.proxyPath == null) {
-                append = session.getUri();
+                append = session.uri().path;
             } else {
-                append = session.getUri().replace(this.config.proxyPath.replace(".*", ""), "");
+                append = session.uri().path.replace(this.config.proxyPath.replace(".*", ""), "");
             }
 
-            session.getLogger().debug("%s -> %s%s%s", url, url, append, session.getQueryString());
+            session.logger().debug("%s -> %s%s?%s", url, url, append, session.uri().query.raw);
             url += append;
-            url += session.getQueryString();
+            if (session.uri().query != Query.EMPTY) {
+                url += '?' + session.uri().query.raw;
+            }
         }
 
         return url;
@@ -236,54 +237,49 @@ public class ProxyServlet extends HttpServlet {
 
         // If the path doesn't match don't serve.
         // A NULL path is wildcard.
-        if ((this.config.proxyPath != null) && !session.getUri().matches(this.config.proxyPath)) {
+        if ((this.config.proxyPath != null) && !session.uri().path.matches(this.config.proxyPath)) {
             return null;
         }
 
         final String url = this.transformUrl(session, false);
 
-        session.getLogger().debug("Final proxy url: %s", url);
+        session.logger().debug("Final proxy url: %s", url);
         Request.Builder builder = new Request.Builder().url(url);
 
         RequestBody body = null;
 
-        if (session.hasBody() && session.getMethod() != HttpMethod.GET) {
+        if (session.body().present() && session.method() != HttpMethod.GET) {
             body = new RequestBody() {
                 @Override
                 public MediaType contentType() {
-                    return null;
+                    return null; // Already handled.
                 }
 
                 @Override
                 public long contentLength() throws IOException {
-                    try {
-                        return Long.parseLong(session.getHeader("Content-Length"));
-                    } catch (NumberFormatException e) {
-                        return -1;
-                    }
+                    return session.body().length();
                 }
 
                 @Override
                 public void writeTo(BufferedSink sink) throws IOException {
-                    sink.writeAll(Okio.source(session.getRequestBodyStream()));
+                    sink.writeAll(Okio.source(session.body().stream()));
                 }
             };
         }
 
-        builder.method(session.getRawMethod(), body);
+        builder.method(session.rawMethod(), body);
 
-        for (Entry<String, List<String>> header : session.getHeaders().entrySet()) {
+        for (Entry<String, List<HeaderValue>> header : session.headers().entrySet()) {
             String key = header.getKey().toLowerCase();
+            if (DISALLOWED_HEADERS.contains(key)) continue;
 
-            if (!DISALLOWED_HEADERS.contains(key)) {
-                for (String value : header.getValue()) {
-                    builder.addHeader(key, value);
-                }
+            for (HeaderValue value : header.getValue()) {
+                builder.addHeader(key, value.raw());
             }
         }
 
         if (this.config.forwardIp) {
-            builder.addHeader("X-Forwarded-For", String.join(", ", session.getRequestHops()));
+            builder.addHeader("X-Forwarded-For", String.join(", ", session.hops()));
         }
 
         Request request = builder.build();
@@ -293,24 +289,24 @@ public class ProxyServlet extends HttpServlet {
             Response $response_pointer = this.client.newCall(request).execute();
             response = $response_pointer;
 
-            HttpStatus status = new HttpStatusAdapter(response.code(), response.message());
+            HttpStatus status = HttpStatus.adapt(response.code(), response.message());
             long responseLen = Long.parseLong(response.header("Content-Length", "-1"));
             InputStream responseStream = response.body().byteStream();
 
             HttpResponse result = new HttpResponse(
                 new ResponseContent() {
                     @Override
-                    public void write(OutputStream out) throws IOException {
+                    public void write(int recommendedBufferSize, OutputStream out) throws IOException {
                         StreamUtil.streamTransfer(
                             responseStream,
                             out,
-                            2048,
+                            recommendedBufferSize,
                             responseLen
                         );
                     }
 
                     @Override
-                    public long getLength() {
+                    public long length() {
                         return responseLen;
                     }
 
@@ -318,10 +314,11 @@ public class ProxyServlet extends HttpServlet {
                     public void close() throws IOException {
                         $response_pointer.close();
                     }
+
                 },
                 status
             )
-                .setMimeType(response.header("Content-Type", "application/octet-stream"));
+                .mime(response.header("Content-Type"));
 
             for (Pair<? extends String, ? extends String> header : response.headers()) {
                 String key = header.getFirst();
@@ -333,138 +330,127 @@ public class ProxyServlet extends HttpServlet {
                     continue;
                 }
 
-                result.putHeader(key, header.getSecond());
+                result.header(key, header.getSecond());
             }
 
             return result;
         } catch (Throwable t) {
-            session.getLogger().severe("An error occurred whilst proxying (serving %s %s): \n%s", builder.getMethod$okhttp(), builder.getUrl$okhttp(), t);
+            session.logger().severe("An error occurred whilst proxying (serving %s %s): \n%s", builder.getMethod$okhttp(), builder.getUrl$okhttp(), t);
             response.close();
             return null;
         }
     }
 
+    @SneakyThrows
     @Override
-    public WebsocketListener serveWebsocket(WebsocketSession session, HttpRouter router) {
+    public WebsocketResponse serveWebsocket(WebsocketSession session, HttpRouter router) {
         if (!this.config.allowWebsockets) {
             return null;
         }
 
         // If the path doesn't match don't serve.
         // A NULL path is wildcard.
-        if ((this.config.proxyPath != null) && !session.getUri().matches(this.config.proxyPath)) {
+        if ((this.config.proxyPath != null) && !session.uri().path.matches(this.config.proxyPath)) {
             return null;
         }
 
         final String url = this.transformUrl(session, true);
 
-        session.getLogger().debug("Final proxy url: %s", url);
+        session.logger().debug("Final proxy url: %s", url);
         URI uri = URI.create(url);
 
-        return new WebsocketListener() {
-            private RemoteWebSocketConnection remote;
-            private PromiseResolver<Void> connectPromiseResolver = Promise.withResolvers();
+        PromiseResolver<Websocket> websocketPromise = Promise.withResolvers();
+        RemoteWebSocketConnection remote = new RemoteWebSocketConnection(uri, session, websocketPromise.promise);
 
-            @Override
-            public void onOpen(Websocket websocket) {
-                try {
-                    this.remote = new RemoteWebSocketConnection(uri, websocket, session.getHeaders());
-
-                    for (Entry<String, List<String>> entry : session.getHeaders().entrySet()) {
-                        this.remote.addHeader(entry.getKey(), entry.getValue().get(0));
-                    }
-
-                    session.getLogger().debug("Connecting to proxy target...");
-                    if (this.remote.connectBlocking()) {
-                        session.getLogger().debug("Connected to proxy target.");
-                        this.connectPromiseResolver.resolve();
-                    } else {
-                        throw new IOException("Couldn't connect to proxy target.");
-                    }
-                } catch (Throwable t) {
-                    this.connectPromiseResolver.reject(new DropConnectionException());
-                    websocket.getSession().getLogger().severe("An error occurred whilst connecting to target (serving %s): \n%s", uri, t);
-                    try {
-                        websocket.close();
-                    } catch (IOException ignored) {}
-                    try {
-                        this.remote.closeBlocking();
-                    } catch (Throwable t2) {
-                        t2.printStackTrace();
-                    }
-                }
+        try {
+            session.logger().debug("Connecting to proxy target...");
+            if (remote.connectBlocking(2, TimeUnit.MINUTES)) {
+                session.logger().debug("Connected to proxy target!");
+            } else {
+                return WebsocketResponse.reject(StandardHttpStatus.SERVICE_UNAVAILABLE);
             }
-
-            @SneakyThrows
-            @Override
-            public void onText(Websocket websocket, String message) {
-                try {
-                    this.connectPromiseResolver.promise.await();
-                    this.remote.send(message);
-                } catch (DropConnectionException e) {
-                    // NOOP
-                } catch (Throwable t) {
-                    websocket.getSession().getLogger().debug("An error occurred whilst sending message to target:\n%s", t);
-                    throw t;
-                }
+        } catch (Throwable t) {
+            session.logger().severe("An error occurred whilst connecting to target (serving %s): \n%s", uri, t);
+            try {
+                remote.close();
+            } catch (Throwable t2) {
+                t2.printStackTrace();
             }
+            return WebsocketResponse.reject(StandardHttpStatus.INTERNAL_ERROR);
+        }
 
-            @SneakyThrows
-            @Override
-            public void onBinary(Websocket websocket, byte[] bytes) {
-                try {
-                    this.connectPromiseResolver.promise.await();
-                    this.remote.send(bytes);
-                } catch (DropConnectionException e) {
-                    // NOOP
-                } catch (Throwable t) {
-                    websocket.getSession().getLogger().debug("An error occurred whilst sending message to target:\n%s", t);
-                    throw t;
+        String acceptedProtocol = remote.selectedProtocol.promise.await();
+
+        return WebsocketResponse.accept(
+            new WebsocketListener() {
+                @Override
+                public void onOpen(Websocket websocket) {
+                    websocketPromise.resolve(websocket);
+
                 }
-            }
 
-            @Override
-            public void onClose(Websocket websocket) {
-                session.getLogger().debug("Closed websocket.");
-                if (!this.remote.isClosing() || !this.remote.isClosed()) {
+                @SneakyThrows
+                @Override
+                public void onText(Websocket websocket, String message) {
                     try {
-                        this.connectPromiseResolver.promise.await();
-                    } catch (Throwable ignored) {}
-                    try {
-                        this.remote.closeBlocking();
+                        remote.send(message);
                     } catch (Throwable t) {
-                        t.printStackTrace();
+                        websocket.session().logger().debug("An error occurred whilst sending message to target:\n%s", t);
+                        throw t;
                     }
                 }
-            }
-        };
+
+                @SneakyThrows
+                @Override
+                public void onBinary(Websocket websocket, byte[] bytes) {
+                    try {
+                        remote.send(bytes);
+                    } catch (Throwable t) {
+                        websocket.session().logger().debug("An error occurred whilst sending message to target:\n%s", t);
+                        throw t;
+                    }
+                }
+
+                @Override
+                public void onClose(Websocket websocket) {
+                    session.logger().debug("Closed websocket.");
+                    try {
+                        remote.close();
+                    } catch (Throwable ignored) {}
+                }
+            },
+            acceptedProtocol
+        );
     }
 
     private class RemoteWebSocketConnection extends WebSocketClient {
-        private Websocket client;
+        private FastLogger sessionLogger;
+        private Promise<Websocket> client;
+        private PromiseResolver<@Nullable String> selectedProtocol = Promise.withResolvers();
 
-        public RemoteWebSocketConnection(URI serverUri, Websocket client, HeaderMap headers) {
+        public RemoteWebSocketConnection(URI serverUri, WebsocketSession session, Promise<Websocket> client) {
             super(serverUri);
+            this.sessionLogger = session.logger();
             this.client = client;
 
             if (sslSocketFactory != null) {
                 this.setSocketFactory(sslSocketFactory);
             }
 
-            for (Entry<String, List<String>> header : headers.entrySet()) {
+            for (Entry<String, List<HeaderValue>> header : session.headers().entrySet()) {
                 String key = header.getKey().toLowerCase();
 
                 if (!DISALLOWED_HEADERS.contains(key)) {
-                    this.addHeader(key, header.getValue().get(0));
+                    this.addHeader(key, header.getValue().get(0).raw());
                 }
             }
 
             if (config.forwardHost) {
-                this.addHeader("Host", this.client.getSession().getHost());
+                this.addHeader("Host", session.uri().host);
             }
 
             if (config.forwardIp) {
-                this.addHeader("X-Forwarded-For", String.join(", ", this.client.getSession().getRequestHops()));
+                this.addHeader("X-Forwarded-For", String.join(", ", session.hops()));
             }
 
             this.setTcpNoDelay(true);
@@ -472,20 +458,27 @@ public class ProxyServlet extends HttpServlet {
 
         @Override
         public void onOpen(ServerHandshake handshakedata) {
-            Map<String, String> headers = new HashMap<>();
             handshakedata
                 .iterateHttpFields()
-                .forEachRemaining((field) -> headers.put(field, handshakedata.getFieldValue(field)));
-            this.client.getSession().getLogger().debug("Handshake headers: %s", headers);
+                .forEachRemaining((field) -> {
+                    if (field.equalsIgnoreCase("Sec-Websocket-Protocol")) {
+                        this.selectedProtocol.resolve(handshakedata.getFieldValue(field));
+                    }
+                });
+
+            if (this.selectedProtocol.promise.isPending()) {
+                // The other end didn't select a protocol, so just use null.
+                this.selectedProtocol.resolve(null);
+            }
         }
 
         @Override
         public void onMessage(String message) {
             try {
-                this.client.getSession().getLogger().trace("Received message from proxy: %s", message);
-                this.client.send(message);
+//                this.sessionLogger.trace("Received message from proxy: %s", message);
+                this.client.await().send(message);
             } catch (Throwable t) {
-                this.client.getSession().getLogger().debug("An error occurred whilst sending message to client: %s", t);
+                this.sessionLogger.debug("An error occurred whilst sending message to client: %s", t);
             }
         }
 
@@ -493,49 +486,26 @@ public class ProxyServlet extends HttpServlet {
         public void onMessage(ByteBuffer message) {
             try {
                 byte[] array = message.array();
-                this.client.getSession().getLogger().trace("Received bytes from proxy: %s", Util.bytesToHex(array));
-                this.client.send(array);
+//                this.sessionLogger.trace("Received bytes from proxy: %s", Util.bytesToHex(array));
+                this.client.await().send(array);
             } catch (Throwable t) {
-                this.client.getSession().getLogger().debug("An error occurred whilst sending message to client: %s", t);
+                this.sessionLogger.debug("An error occurred whilst sending message to client: %s", t);
             }
         }
 
         @Override
         public void onClose(int code, String reason, boolean remote) {
-            this.client.getSession().getLogger().debug("Proxy's close reason: %d %s", code, reason);
+            this.sessionLogger.debug("Remote's close reason: %d %s", code, reason);
             try {
-                this.client.close();
-            } catch (IOException e) {}
+                this.client.await().close();
+            } catch (Throwable ignored) {}
         }
 
         @Override
         public void onError(Exception e) {
-            this.client.getSession().getLogger().fatal("Uncaught: %s", e);
-        }
-
-    }
-
-    @AllArgsConstructor
-    private static class HttpStatusAdapter implements HttpStatus {
-        private int code;
-        private String description;
-
-        @Override
-        public String getStatusString() {
-            return String.format("%d %s", this.code, this.description);
-        }
-
-        @Override
-        public String getDescription() {
-            return this.description;
-        }
-
-        @Override
-        public int getStatusCode() {
-            return this.code;
+            this.sessionLogger.fatal("Uncaught: %s", e);
         }
     }
-
 }
 
 class UnsafeTrustManager extends X509ExtendedTrustManager {
