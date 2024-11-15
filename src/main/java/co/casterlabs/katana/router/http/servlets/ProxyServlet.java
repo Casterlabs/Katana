@@ -373,9 +373,7 @@ public class ProxyServlet extends HttpServlet {
             session.logger().severe("An error occurred whilst connecting to target (serving %s): \n%s", uri, t);
             try {
                 remote.close();
-            } catch (Throwable t2) {
-                t2.printStackTrace();
-            }
+            } catch (Throwable ignored) {}
             return WebsocketResponse.reject(StandardHttpStatus.INTERNAL_ERROR);
         }
 
@@ -386,7 +384,6 @@ public class ProxyServlet extends HttpServlet {
                 @Override
                 public void onOpen(Websocket websocket) {
                     websocketPromise.resolve(websocket);
-
                 }
 
                 @SneakyThrows
