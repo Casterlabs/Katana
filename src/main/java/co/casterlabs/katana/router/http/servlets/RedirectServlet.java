@@ -43,6 +43,11 @@ public class RedirectServlet extends HttpServlet {
     }
 
     @Override
+    public boolean matchHttp(HttpSession session, HttpRouter router) {
+        return true;
+    }
+
+    @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         String redirectUrl = this.config.redirectUrl;
         if (this.config.includePath) redirectUrl += session.uri().rawPath;

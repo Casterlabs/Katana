@@ -348,24 +348,39 @@ public class HttpRouter implements HttpProtoHandler, WebsocketHandler, KatanaRou
         return this.iterateWebsocketConfigs(session, servlets);
     }
 
+    @SneakyThrows
     private HttpResponse iterateConfigs(HttpSession session, Collection<HttpServlet> servlets) {
         for (HttpServlet servlet : servlets) {
-            HttpResponse response = servlet.serveHttp(session, this);
+            if (!servlet.matchHttp(session, this)) continue;
 
-            if (response != null) {
-                return response;
-            }
+//            if (servlet.serveFromPlatformThread()) {
+//                try {
+//                    return RakuraiTaskExecutor.PLATFORM_POOL.submit(() -> servlet.serveHttp(session, this)).get();
+//                } catch (ExecutionException e) {
+//                    throw e.getCause();
+//                }
+//            } else {
+            return servlet.serveHttp(session, this);
+//            }
         }
 
         return null;
     }
 
+    @SneakyThrows
     private WebsocketResponse iterateWebsocketConfigs(WebsocketSession session, Collection<HttpServlet> servlets) {
         for (HttpServlet servlet : servlets) {
-            WebsocketResponse response = servlet.serveWebsocket(session, this);
-            if (response != null) {
-                return response;
-            }
+            if (!servlet.matchWebsocket(session, this)) continue;
+
+//            if (servlet.serveFromPlatformThread()) {
+//                try {
+//                    return RakuraiTaskExecutor.PLATFORM_POOL.submit(() -> servlet.serveWebsocket(session, this)).get();
+//                } catch (ExecutionException e) {
+//                    throw e.getCause();
+//                }
+//            } else {
+            return servlet.serveWebsocket(session, this);
+//            }
         }
 
         return null;

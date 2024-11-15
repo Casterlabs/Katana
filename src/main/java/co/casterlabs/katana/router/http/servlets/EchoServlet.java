@@ -37,6 +37,11 @@ public class EchoServlet extends HttpServlet {
     public static class HostConfiguration {
     }
 
+    @Override
+    public boolean matchHttp(HttpSession session, HttpRouter router) {
+        return true;
+    }
+
     @SneakyThrows
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
@@ -64,6 +69,11 @@ public class EchoServlet extends HttpServlet {
         return HttpResponse
             .newFixedLengthResponse(StandardHttpStatus.OK, request.toString())
             .mime("text/plain");
+    }
+
+    @Override
+    public boolean matchWebsocket(WebsocketSession session, HttpRouter router) {
+        return true;
     }
 
     @Override

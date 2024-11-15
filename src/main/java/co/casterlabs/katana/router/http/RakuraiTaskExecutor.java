@@ -10,17 +10,17 @@ import co.casterlabs.rhs.util.TaskExecutor;
 public class RakuraiTaskExecutor implements TaskExecutor {
     public static final RakuraiTaskExecutor INSTANCE = new RakuraiTaskExecutor();
 
-    private static final ExecutorService PLATFORM_POOL = Executors.newCachedThreadPool((run) -> {
+    public static final ExecutorService PLATFORM_POOL = Executors.newCachedThreadPool((run) -> {
         return Thread.ofPlatform()
             .name("RHS - Platform Pool", 0)
             .unstarted(run);
     });
 
-    private static final ExecutorService VIRTUAL_POOL = Executors.newCachedThreadPool((run) -> {
-        return Thread.ofVirtual()
-            .name("RHS - Virtual Pool", 0)
-            .unstarted(run);
-    });
+//    public static final ExecutorService VIRTUAL_POOL = Executors.newCachedThreadPool((run) -> {
+//        return Thread.ofVirtual()
+//            .name("RHS - Virtual Pool", 0)
+//            .unstarted(run);
+//    });
 
     @Override
     public Task execute(Runnable toRun, TaskType type) {
@@ -33,7 +33,8 @@ public class RakuraiTaskExecutor implements TaskExecutor {
             case MEDIUM_IO:
             case LIGHT_IO:
             default:
-                exec = VIRTUAL_POOL;
+//                exec = VIRTUAL_POOL;
+                exec = PLATFORM_POOL;
                 break;
         }
 

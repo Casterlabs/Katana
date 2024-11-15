@@ -28,6 +28,7 @@ import co.casterlabs.commons.async.promise.Promise;
 import co.casterlabs.commons.async.promise.PromiseResolver;
 import co.casterlabs.commons.io.streams.StreamUtil;
 import co.casterlabs.katana.router.http.HttpRouter;
+import co.casterlabs.katana.router.http.HttpUtil;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.annotating.JsonClass;
 import co.casterlabs.rakurai.json.annotating.JsonField;
@@ -229,19 +230,28 @@ public class ProxyServlet extends HttpServlet {
         return url;
     }
 
-    @SneakyThrows
     @Override
-    public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
+    public boolean serveFromPlatformThread() {
+        return true;
+    }
+
+    @Override
+    public boolean matchHttp(HttpSession session, HttpRouter router) {
         if (!this.config.allowHttp) {
-            return null;
+            return false;
         }
 
         // If the path doesn't match don't serve.
         // A NULL path is wildcard.
         if ((this.config.proxyPath != null) && !session.uri().path.matches(this.config.proxyPath)) {
-            return null;
+            return false;
         }
 
+        return true;
+    }
+
+    @Override
+    public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         final String url = this.transformUrl(session, false);
 
         session.logger().debug("Final proxy url: %s", url);
@@ -337,24 +347,31 @@ public class ProxyServlet extends HttpServlet {
             return result;
         } catch (Throwable t) {
             session.logger().severe("An error occurred whilst proxying (serving %s %s): \n%s", builder.getMethod$okhttp(), builder.getUrl$okhttp(), t);
-            response.close();
-            return null;
+            if (response != null) {
+                response.close();
+            }
+            return HttpUtil.errorResponse(session, StandardHttpStatus.INTERNAL_ERROR, "An error occurred whilst proxying.");
         }
     }
 
-    @SneakyThrows
     @Override
-    public WebsocketResponse serveWebsocket(WebsocketSession session, HttpRouter router) {
+    public boolean matchWebsocket(WebsocketSession session, HttpRouter router) {
         if (!this.config.allowWebsockets) {
-            return null;
+            return false;
         }
 
         // If the path doesn't match don't serve.
         // A NULL path is wildcard.
         if ((this.config.proxyPath != null) && !session.uri().path.matches(this.config.proxyPath)) {
-            return null;
+            return false;
         }
 
+        return true;
+    }
+
+    @SneakyThrows
+    @Override
+    public WebsocketResponse serveWebsocket(WebsocketSession session, HttpRouter router) {
         final String url = this.transformUrl(session, true);
 
         session.logger().debug("Final proxy url: %s", url);

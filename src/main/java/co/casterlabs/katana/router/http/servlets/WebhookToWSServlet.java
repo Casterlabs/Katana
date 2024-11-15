@@ -27,7 +27,6 @@ import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import co.casterlabs.rhs.HttpMethod;
 import co.casterlabs.rhs.HttpStatus;
 import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
-import co.casterlabs.rhs.protocol.DropConnectionException;
 import co.casterlabs.rhs.protocol.http.HeaderValue;
 import co.casterlabs.rhs.protocol.http.HttpResponse;
 import co.casterlabs.rhs.protocol.http.HttpSession;
@@ -73,14 +72,14 @@ public class WebhookToWSServlet extends HttpServlet {
         }
     }
 
+    @Override
+    public boolean matchHttp(HttpSession session, HttpRouter router) {
+        return session.uri().path.startsWith(this.config.path);
+    }
+
     @SneakyThrows
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
-        // If the path doesn't match don't handle.
-        if (!session.uri().path.startsWith(this.config.path)) {
-            return null;
-        }
-
         if (!this.config.allowedMethods.contains(session.method())) {
             return HttpResponse.newFixedLengthResponse(StandardHttpStatus.METHOD_NOT_ALLOWED, "Method not allowed.");
         }
@@ -140,17 +139,19 @@ public class WebhookToWSServlet extends HttpServlet {
     }
 
     @Override
-    public WebsocketResponse serveWebsocket(WebsocketSession session, HttpRouter router) {
-        // If the path doesn't match don't handle.
-        if (!session.uri().path.startsWith(this.config.path)) {
-            return null;
-        }
+    public boolean matchWebsocket(WebsocketSession session, HttpRouter router) {
+        if (!session.uri().path.startsWith(this.config.path)) return false;
 
         // If the secret doesn't match don't handle.
         if (!session.uri().path.startsWith(this.config.path + '/' + this.config.websocketSecret)) {
-            throw new DropConnectionException();
+            return false;
         }
 
+        return true;
+    }
+
+    @Override
+    public WebsocketResponse serveWebsocket(WebsocketSession session, HttpRouter router) {
         return WebsocketResponse.accept(new WebsocketListener() {
             @Override
             public void onOpen(Websocket websocket) {

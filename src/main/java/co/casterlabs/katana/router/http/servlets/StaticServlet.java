@@ -53,6 +53,11 @@ public class StaticServlet extends HttpServlet {
 
     }
 
+    @Override
+    public boolean matchHttp(HttpSession session, HttpRouter router) {
+        return true;
+    }
+
     @SneakyThrows
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {

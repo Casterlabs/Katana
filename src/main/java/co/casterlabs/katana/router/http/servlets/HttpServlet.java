@@ -41,8 +41,23 @@ public abstract class HttpServlet {
     public abstract void init(JsonObject config) throws JsonValidationException, JsonParseException;
 
     /* Override */
+    public boolean serveFromPlatformThread() {
+        return false;
+    }
+
+    /* Override */
+    public boolean matchHttp(HttpSession session, HttpRouter router) {
+        return false;
+    }
+
+    /* Override */
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
         return null;
+    }
+
+    /* Override */
+    public boolean matchWebsocket(WebsocketSession session, HttpRouter router) {
+        return false;
     }
 
     /* Override */

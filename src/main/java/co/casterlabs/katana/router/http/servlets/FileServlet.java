@@ -14,7 +14,6 @@ import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
 import co.casterlabs.rhs.protocol.http.HttpResponse;
 import co.casterlabs.rhs.protocol.http.HttpSession;
 import lombok.Getter;
-import lombok.SneakyThrows;
 
 public class FileServlet extends HttpServlet {
     private @Getter HostConfiguration config;
@@ -46,13 +45,13 @@ public class FileServlet extends HttpServlet {
 
     }
 
-    @SneakyThrows
+    @Override
+    public boolean matchHttp(HttpSession session, HttpRouter router) {
+        return session.uri().path.matches(this.config.path);
+    }
+
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
-        if (!session.uri().path.matches(this.config.path)) {
-            return null;
-        }
-
         try {
             File file = new File(this.config.file);
 
