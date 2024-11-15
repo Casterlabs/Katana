@@ -10,21 +10,15 @@ import co.casterlabs.rhs.util.TaskExecutor;
 public class RakuraiTaskExecutor implements TaskExecutor {
     public static final RakuraiTaskExecutor INSTANCE = new RakuraiTaskExecutor();
 
-    private static final ExecutorService LIGHT_IO_EXEC = Executors.newFixedThreadPool(10000, (run) -> {
+    private static final ExecutorService PLATFORM_POOL = Executors.newCachedThreadPool((run) -> {
         return Thread.ofVirtual()
-            .name("RHS - Light IO (V)", 0)
+            .name("RHS - Platform Pool", 0)
             .unstarted(run);
     });
 
-    private static final ExecutorService MEDIUM_IO_EXEC = Executors.newCachedThreadPool((run) -> {
+    private static final ExecutorService VIRTUAL_POOL = Executors.newCachedThreadPool((run) -> {
         return Thread.ofVirtual()
-            .name("RHS - Medium IO (V)", 0)
-            .unstarted(run);
-    });
-
-    private static final ExecutorService HEAVY_IO_EXEC = Executors.newCachedThreadPool((run) -> {
-        return Thread.ofPlatform()
-            .name("RHS - Heavy IO (P)", 0)
+            .name("RHS - Virtual Pool", 0)
             .unstarted(run);
     });
 
@@ -32,15 +26,14 @@ public class RakuraiTaskExecutor implements TaskExecutor {
     public Task execute(Runnable toRun, TaskType type) {
         ExecutorService exec = null;
         switch (type) {
-            case MEDIUM_IO:
-                exec = MEDIUM_IO_EXEC;
-                break;
             case HEAVY_IO:
-                exec = HEAVY_IO_EXEC;
+                exec = PLATFORM_POOL;
                 break;
+
+            case MEDIUM_IO:
             case LIGHT_IO:
             default:
-                exec = LIGHT_IO_EXEC;
+                exec = VIRTUAL_POOL;
                 break;
         }
 
