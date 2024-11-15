@@ -20,6 +20,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.Nullable;
 
@@ -500,6 +501,8 @@ public class ProxyServlet extends HttpServlet {
 
         @Override
         public void onError(Exception e) {
+            if (e instanceof WebsocketNotConnectedException) return; // Ignore.
+
             this.sessionLogger.fatal("Uncaught: %s", e);
         }
     }
