@@ -32,14 +32,15 @@ public class RakuraiTaskExecutor implements TaskExecutor {
     public Task execute(Runnable toRun, TaskType type) {
         ExecutorService exec = null;
         switch (type) {
-            case LIGHT_IO:
-                exec = LIGHT_IO_EXEC;
-                break;
             case MEDIUM_IO:
                 exec = MEDIUM_IO_EXEC;
                 break;
             case HEAVY_IO:
                 exec = HEAVY_IO_EXEC;
+                break;
+            case LIGHT_IO:
+            default:
+                exec = LIGHT_IO_EXEC;
                 break;
         }
 
