@@ -10,7 +10,7 @@ import co.casterlabs.rhs.util.TaskExecutor;
 public class RakuraiTaskExecutor implements TaskExecutor {
     public static final RakuraiTaskExecutor INSTANCE = new RakuraiTaskExecutor();
 
-    private static final ExecutorService LIGHT_IO_EXEC = Executors.newFixedThreadPool(100000, (run) -> {
+    private static final ExecutorService LIGHT_IO_EXEC = Executors.newFixedThreadPool(10000, (run) -> {
         return Thread.ofVirtual()
             .name("RHS - Light IO (V)", 0)
             .unstarted(run);

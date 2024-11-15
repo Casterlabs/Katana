@@ -116,7 +116,7 @@
 		<dependency>
 			<groupId>co.casterlabs</groupId>
 			<artifactId>rakurai-http-server</artifactId>
-			<version>681df02</version>
+			<version>8b140ce</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
