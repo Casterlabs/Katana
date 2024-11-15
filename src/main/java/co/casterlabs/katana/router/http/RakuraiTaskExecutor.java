@@ -11,7 +11,7 @@ public class RakuraiTaskExecutor implements TaskExecutor {
     public static final RakuraiTaskExecutor INSTANCE = new RakuraiTaskExecutor();
 
     private static final ExecutorService PLATFORM_POOL = Executors.newCachedThreadPool((run) -> {
-        return Thread.ofVirtual()
+        return Thread.ofPlatform()
             .name("RHS - Platform Pool", 0)
             .unstarted(run);
     });
