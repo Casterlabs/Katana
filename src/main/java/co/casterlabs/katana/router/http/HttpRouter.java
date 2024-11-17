@@ -351,17 +351,9 @@ public class HttpRouter implements HttpProtoHandler, WebsocketHandler, KatanaRou
     @SneakyThrows
     private HttpResponse iterateConfigs(HttpSession session, Collection<HttpServlet> servlets) {
         for (HttpServlet servlet : servlets) {
-            if (!servlet.matchHttp(session, this)) continue;
-
-//            if (servlet.serveFromPlatformThread()) {
-//                try {
-//                    return RakuraiTaskExecutor.PLATFORM_POOL.submit(() -> servlet.serveHttp(session, this)).get();
-//                } catch (ExecutionException e) {
-//                    throw e.getCause();
-//                }
-//            } else {
-            return servlet.serveHttp(session, this);
-//            }
+            if (servlet.matchHttp(session, this)) {
+                return servlet.serveHttp(session, this);
+            }
         }
 
         return null;
@@ -370,17 +362,9 @@ public class HttpRouter implements HttpProtoHandler, WebsocketHandler, KatanaRou
     @SneakyThrows
     private WebsocketResponse iterateWebsocketConfigs(WebsocketSession session, Collection<HttpServlet> servlets) {
         for (HttpServlet servlet : servlets) {
-            if (!servlet.matchWebsocket(session, this)) continue;
-
-//            if (servlet.serveFromPlatformThread()) {
-//                try {
-//                    return RakuraiTaskExecutor.PLATFORM_POOL.submit(() -> servlet.serveWebsocket(session, this)).get();
-//                } catch (ExecutionException e) {
-//                    throw e.getCause();
-//                }
-//            } else {
-            return servlet.serveWebsocket(session, this);
-//            }
+            if (servlet.matchWebsocket(session, this)) {
+                return servlet.serveWebsocket(session, this);
+            }
         }
 
         return null;

@@ -116,7 +116,7 @@
 		<dependency>
 			<groupId>co.casterlabs</groupId>
 			<artifactId>rakurai-http-server</artifactId>
-			<version>acfa4c5</version>
+			<version>ce29f02</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -188,19 +188,19 @@
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>async</artifactId>
-			<version>1.8.0-1</version>
+			<version>f8b3d29</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>functional</artifactId>
-			<version>1.8.0-1</version>
+			<version>f8b3d29</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>io</artifactId>
-			<version>1.8.0-1</version>
+			<version>f8b3d29</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>

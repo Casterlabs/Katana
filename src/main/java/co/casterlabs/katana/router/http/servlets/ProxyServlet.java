@@ -20,7 +20,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
 import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.exceptions.WebsocketNotConnectedException;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.Nullable;
 
@@ -220,19 +219,16 @@ public class ProxyServlet extends HttpServlet {
                 append = session.uri().path.replace(this.config.proxyPath.replace(".*", ""), "");
             }
 
-            session.logger().debug("%s -> %s%s?%s", url, url, append, session.uri().query.raw);
-            url += append;
             if (session.uri().query != Query.EMPTY) {
-                url += '?' + session.uri().query.raw;
+                append += '?' + session.uri().query.raw;
             }
+
+            session.logger().debug("%s -> %s%s", url, url, append);
+
+            url += append;
         }
 
         return url;
-    }
-
-    @Override
-    public boolean serveFromPlatformThread() {
-        return true;
     }
 
     @Override
@@ -382,7 +378,8 @@ public class ProxyServlet extends HttpServlet {
 
         try {
             session.logger().debug("Connecting to proxy target...");
-            if (remote.connectBlocking(2, TimeUnit.MINUTES)) {
+
+            if (remote.connectBlocking(1, TimeUnit.MINUTES)) {
                 session.logger().debug("Connected to proxy target!");
             } else {
                 return WebsocketResponse.reject(StandardHttpStatus.SERVICE_UNAVAILABLE);
@@ -395,7 +392,7 @@ public class ProxyServlet extends HttpServlet {
             return WebsocketResponse.reject(StandardHttpStatus.INTERNAL_ERROR);
         }
 
-        String acceptedProtocol = remote.selectedProtocol.promise.await();
+        String acceptedProtocol = remote.selectedProtocol;
 
         return WebsocketResponse.accept(
             new WebsocketListener() {
@@ -429,6 +426,11 @@ public class ProxyServlet extends HttpServlet {
                 @Override
                 public void onClose(Websocket websocket) {
                     session.logger().debug("Closed websocket.");
+
+                    if (websocketPromise.promise.isPending()) {
+                        websocketPromise.reject(new IOException("Closed"));
+                    }
+
                     try {
                         remote.close();
                     } catch (Throwable ignored) {}
@@ -441,7 +443,8 @@ public class ProxyServlet extends HttpServlet {
     private class RemoteWebSocketConnection extends WebSocketClient {
         private FastLogger sessionLogger;
         private Promise<Websocket> client;
-        private PromiseResolver<@Nullable String> selectedProtocol = Promise.withResolvers();
+
+        public String selectedProtocol = null;
 
         public RemoteWebSocketConnection(URI serverUri, WebsocketSession session, Promise<Websocket> client) {
             super(serverUri);
@@ -477,14 +480,9 @@ public class ProxyServlet extends HttpServlet {
                 .iterateHttpFields()
                 .forEachRemaining((field) -> {
                     if (field.equalsIgnoreCase("Sec-Websocket-Protocol")) {
-                        this.selectedProtocol.resolve(handshakedata.getFieldValue(field));
+                        this.selectedProtocol = handshakedata.getFieldValue(field);
                     }
                 });
-
-            if (this.selectedProtocol.promise.isPending()) {
-                // The other end didn't select a protocol, so just use null.
-                this.selectedProtocol.resolve(null);
-            }
         }
 
         @Override
@@ -511,14 +509,17 @@ public class ProxyServlet extends HttpServlet {
         @Override
         public void onClose(int code, String reason, boolean remote) {
             this.sessionLogger.debug("Remote's close reason: %d %s", code, reason);
-            try {
-                this.client.await().close();
-            } catch (Throwable ignored) {}
+
+            if (this.client.isSettled()) {
+                try {
+                    this.client.await().close();
+                } catch (Throwable ignored) {}
+            }
         }
 
         @Override
         public void onError(Exception e) {
-            if (e instanceof WebsocketNotConnectedException) return; // Ignore.
+//            if (e instanceof WebsocketNotConnectedException) return; // Ignore.
 
             this.sessionLogger.fatal("Uncaught: %s", e);
         }
