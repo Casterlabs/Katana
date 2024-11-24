@@ -5,11 +5,12 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
@@ -19,13 +20,13 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509ExtendedTrustManager;
 
-import org.java_websocket.client.WebSocketClient;
-import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.Nullable;
 
 import co.casterlabs.commons.async.promise.Promise;
 import co.casterlabs.commons.async.promise.PromiseResolver;
 import co.casterlabs.commons.io.streams.StreamUtil;
+import co.casterlabs.commons.websocket.WebSocketClient;
+import co.casterlabs.commons.websocket.WebSocketListener;
 import co.casterlabs.katana.router.http.HttpRouter;
 import co.casterlabs.katana.router.http.HttpUtil;
 import co.casterlabs.rakurai.json.Rson;
@@ -78,6 +79,7 @@ public class ProxyServlet extends HttpServlet {
         "sec-websocket-key",
         "sec-websocket-extensions",
         "sec-websocket-version",
+        "sec-websocket-protocol",
         "remote-addr",
         "http-client-ip",
         "host",
@@ -378,21 +380,17 @@ public class ProxyServlet extends HttpServlet {
 
         try {
             session.logger().debug("Connecting to proxy target...");
-
-            if (remote.connectBlocking(1, TimeUnit.MINUTES)) {
-                session.logger().debug("Connected to proxy target!");
-            } else {
-                return WebsocketResponse.reject(StandardHttpStatus.SERVICE_UNAVAILABLE);
-            }
+            remote.socket.connect(TimeUnit.SECONDS.toMillis(15), TimeUnit.SECONDS.toMillis(5));
         } catch (Throwable t) {
             session.logger().severe("An error occurred whilst connecting to target (serving %s): \n%s", uri, t);
             try {
-                remote.close();
+                remote.socket.close();
             } catch (Throwable ignored) {}
             return WebsocketResponse.reject(StandardHttpStatus.INTERNAL_ERROR);
         }
 
         String acceptedProtocol = remote.selectedProtocol;
+        session.logger().debug("Connected! Using protocol: %s", acceptedProtocol);
 
         return WebsocketResponse.accept(
             new WebsocketListener() {
@@ -405,7 +403,8 @@ public class ProxyServlet extends HttpServlet {
                 @Override
                 public void onText(Websocket websocket, String message) {
                     try {
-                        remote.send(message);
+                        session.logger().trace("Received message from client: %s", message);
+                        remote.socket.send(message);
                     } catch (Throwable t) {
                         websocket.session().logger().debug("An error occurred whilst sending message to target:\n%s", t);
                         throw t;
@@ -416,7 +415,8 @@ public class ProxyServlet extends HttpServlet {
                 @Override
                 public void onBinary(Websocket websocket, byte[] bytes) {
                     try {
-                        remote.send(bytes);
+                        session.logger().trace("Received bytes from client: len=%d", bytes.length);
+                        remote.socket.send(bytes);
                     } catch (Throwable t) {
                         websocket.session().logger().debug("An error occurred whilst sending message to target:\n%s", t);
                         throw t;
@@ -432,7 +432,7 @@ public class ProxyServlet extends HttpServlet {
                     }
 
                     try {
-                        remote.close();
+                        remote.socket.close();
                     } catch (Throwable ignored) {}
                 }
             },
@@ -440,76 +440,72 @@ public class ProxyServlet extends HttpServlet {
         );
     }
 
-    private class RemoteWebSocketConnection extends WebSocketClient {
+    private class RemoteWebSocketConnection implements WebSocketListener {
         private FastLogger sessionLogger;
         private Promise<Websocket> client;
 
         public String selectedProtocol = null;
 
+        private WebSocketClient socket;
+
         public RemoteWebSocketConnection(URI serverUri, WebsocketSession session, Promise<Websocket> client) {
-            super(serverUri);
             this.sessionLogger = session.logger();
             this.client = client;
 
-            if (sslSocketFactory != null) {
-                this.setSocketFactory(sslSocketFactory);
-            }
-
+            Map<String, String> headers = new HashMap<>();
             for (Entry<String, List<HeaderValue>> header : session.headers().entrySet()) {
                 String key = header.getKey().toLowerCase();
 
                 if (!DISALLOWED_HEADERS.contains(key)) {
-                    this.addHeader(key, header.getValue().get(0).raw());
+                    headers.put(key, header.getValue().get(0).raw());
                 }
             }
 
-            if (config.forwardHost) {
-                this.addHeader("Host", session.uri().host);
-            }
-
             if (config.forwardIp) {
-                this.addHeader("X-Forwarded-For", String.join(", ", session.hops()));
+                headers.put("X-Forwarded-For", String.join(", ", session.hops()));
             }
 
-            this.setTcpNoDelay(true);
+            if (config.forwardHost) {
+                headers.put("Host", session.uri().host);
+            }
+
+            this.socket = new WebSocketClient(serverUri, headers, session.protocols());
+            this.socket.setListener(this);
+            this.socket.setThreadFactory(Thread.ofVirtual().factory());
+
+            if (sslSocketFactory != null) {
+                this.socket.setSocketFactory(sslSocketFactory);
+            }
         }
 
         @Override
-        public void onOpen(ServerHandshake handshakedata) {
-            handshakedata
-                .iterateHttpFields()
-                .forEachRemaining((field) -> {
-                    if (field.equalsIgnoreCase("Sec-Websocket-Protocol")) {
-                        this.selectedProtocol = handshakedata.getFieldValue(field);
-                    }
-                });
+        public void onOpen(WebSocketClient client, Map<String, String> headers, @Nullable String acceptedProtocol) {
+            this.selectedProtocol = acceptedProtocol;
         }
 
         @Override
-        public void onMessage(String message) {
+        public void onText(WebSocketClient client, String string) {
             try {
-//                this.sessionLogger.trace("Received message from proxy: %s", message);
-                this.client.await().send(message);
+                this.sessionLogger.trace("Received message from proxy: %s", string);
+                this.client.await().send(string);
             } catch (Throwable t) {
                 this.sessionLogger.debug("An error occurred whilst sending message to client: %s", t);
             }
         }
 
         @Override
-        public void onMessage(ByteBuffer message) {
+        public void onBinary(WebSocketClient client, byte[] bytes) {
             try {
-                byte[] array = message.array();
-//                this.sessionLogger.trace("Received bytes from proxy: %s", Util.bytesToHex(array));
-                this.client.await().send(array);
+                this.sessionLogger.trace("Received bytes from proxy: len=%d", bytes.length);
+                this.client.await().send(bytes);
             } catch (Throwable t) {
                 this.sessionLogger.debug("An error occurred whilst sending message to client: %s", t);
             }
         }
 
         @Override
-        public void onClose(int code, String reason, boolean remote) {
-            this.sessionLogger.debug("Remote's close reason: %d %s", code, reason);
-
+        public void onClosed(WebSocketClient client) {
+//            this.sessionLogger.debug("Remote's close reason: %d %s", code, reason);
             if (this.client.isSettled()) {
                 try {
                     this.client.await().close();
@@ -518,10 +514,8 @@ public class ProxyServlet extends HttpServlet {
         }
 
         @Override
-        public void onError(Exception e) {
-//            if (e instanceof WebsocketNotConnectedException) return; // Ignore.
-
-            this.sessionLogger.fatal("Uncaught: %s", e);
+        public void onException(Throwable t) {
+            this.sessionLogger.fatal("Uncaught: %s", t);
         }
     }
 }

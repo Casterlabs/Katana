@@ -152,9 +152,9 @@
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.java-websocket</groupId>
-			<artifactId>Java-WebSocket</artifactId>
-			<version>1.5.7</version>
+			<groupId>co.casterlabs.commons</groupId>
+			<artifactId>websocket</artifactId>
+			<version>50568fd</version>
 			<scope>compile</scope>
 		</dependency>
 		<!-- <dependency>
@@ -188,19 +188,19 @@
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>async</artifactId>
-			<version>f8b3d29</version>
+			<version>d4647a1</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>functional</artifactId>
-			<version>f8b3d29</version>
+			<version>d4647a1</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>io</artifactId>
-			<version>f8b3d29</version>
+			<version>d4647a1</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
