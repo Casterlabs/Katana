@@ -1,0 +1,9 @@
+services:
+  katana:
+    image: ghcr.io/casterlabs/katana:latest
+    restart: always
+    volumes:
+      - ./config.json:/home/container/config.json
+    ports:
+      - 80:80
+      - 443:443
