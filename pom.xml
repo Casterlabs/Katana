@@ -154,7 +154,7 @@
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>websocket</artifactId>
-			<version>50568fd</version>
+			<version>4ec2972</version>
 			<scope>compile</scope>
 		</dependency>
 		<!-- <dependency>
