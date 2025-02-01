@@ -39,11 +39,12 @@ import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import co.casterlabs.rhs.HttpMethod;
 import co.casterlabs.rhs.HttpStatus;
 import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
-import co.casterlabs.rhs.protocol.http.HeaderValue;
+import co.casterlabs.rhs.protocol.HeaderValue;
 import co.casterlabs.rhs.protocol.http.HttpResponse;
 import co.casterlabs.rhs.protocol.http.HttpResponse.ResponseContent;
 import co.casterlabs.rhs.protocol.http.HttpSession;
-import co.casterlabs.rhs.protocol.http.Query;
+import co.casterlabs.rhs.protocol.uri.Query;
+import co.casterlabs.rhs.protocol.uri.SimpleUri;
 import co.casterlabs.rhs.protocol.websocket.Websocket;
 import co.casterlabs.rhs.protocol.websocket.WebsocketListener;
 import co.casterlabs.rhs.protocol.websocket.WebsocketResponse;
@@ -176,11 +177,11 @@ public class ProxyServlet extends HttpServlet {
 
     }
 
-    private String transformUrl(HttpSession session, boolean isWebSocket) {
+    private String transformUrl(FastLogger logger, SimpleUri uri, boolean isWebSocket) {
         String url = this.config.proxyUrl;
 
         if (this.config.solveForIp) {
-            String[] requested = session.uri().host.substring(0, session.uri().host.indexOf('.')).split("-");
+            String[] requested = uri.host.substring(0, uri.host.indexOf('.')).split("-");
 
             String targetIp;
             if (requested.length == 4) {
@@ -208,24 +209,24 @@ public class ProxyServlet extends HttpServlet {
         if (this.config.forwardHost) {
             // Replace the proxyUrl's host with the session's host. Look at the above DNS
             // logic to see what this does.
-            url = url.replaceFirst(this.proxyUrlHost, session.uri().host);
-            session.logger().debug("Rewrote %s to %s, keep this in mind for the following messages.", this.proxyUrlHost, session.uri().host);
+            url = url.replaceFirst(this.proxyUrlHost, uri.host);
+            logger.debug("Rewrote %s to %s, keep this in mind for the following messages.", this.proxyUrlHost, uri.host);
         }
 
         if (this.config.includePath) {
             String append;
 
             if (this.config.proxyPath == null) {
-                append = session.uri().path;
+                append = uri.path;
             } else {
-                append = session.uri().path.replace(this.config.proxyPath.replace(".*", ""), "");
+                append = uri.path.replace(this.config.proxyPath.replace(".*", ""), "");
             }
 
-            if (session.uri().query != Query.EMPTY) {
-                append += '?' + session.uri().query.raw;
+            if (uri.query != Query.EMPTY) {
+                append += '?' + uri.query.raw;
             }
 
-            session.logger().debug("%s -> %s%s", url, url, append);
+            logger.debug("%s -> %s%s", url, url, append);
 
             url += append;
         }
@@ -250,7 +251,7 @@ public class ProxyServlet extends HttpServlet {
 
     @Override
     public HttpResponse serveHttp(HttpSession session, HttpRouter router) {
-        final String url = this.transformUrl(session, false);
+        final String url = this.transformUrl(session.logger(), session.uri(), false);
 
         session.logger().debug("Final proxy url: %s", url);
         Request.Builder builder = new Request.Builder().url(url);
@@ -370,7 +371,7 @@ public class ProxyServlet extends HttpServlet {
     @SneakyThrows
     @Override
     public WebsocketResponse serveWebsocket(WebsocketSession session, HttpRouter router) {
-        final String url = this.transformUrl(session, true);
+        final String url = this.transformUrl(session.logger(), session.uri(), true);
 
         session.logger().debug("Final proxy url: %s", url);
         URI uri = URI.create(url);
@@ -469,7 +470,7 @@ public class ProxyServlet extends HttpServlet {
                 headers.put("Host", session.uri().host);
             }
 
-            this.socket = new WebSocketClient(serverUri, headers, session.protocols());
+            this.socket = new WebSocketClient(serverUri, headers, session.acceptedProtocols());
             this.socket.setListener(this);
             this.socket.setThreadFactory(Thread.ofVirtual().factory());
 

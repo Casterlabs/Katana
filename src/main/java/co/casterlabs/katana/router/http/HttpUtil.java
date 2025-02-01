@@ -8,7 +8,7 @@ import co.casterlabs.katana.Util;
 import co.casterlabs.katana.router.http.servlets.HttpServlet;
 import co.casterlabs.rhs.HttpMethod;
 import co.casterlabs.rhs.HttpStatus;
-import co.casterlabs.rhs.protocol.http.HeaderValue;
+import co.casterlabs.rhs.protocol.HeaderValue;
 import co.casterlabs.rhs.protocol.http.HttpResponse;
 import co.casterlabs.rhs.protocol.http.HttpSession;
 

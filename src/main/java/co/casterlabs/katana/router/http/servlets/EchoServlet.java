@@ -11,7 +11,7 @@ import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
-import co.casterlabs.rhs.protocol.http.HeaderValue;
+import co.casterlabs.rhs.protocol.HeaderValue;
 import co.casterlabs.rhs.protocol.http.HttpResponse;
 import co.casterlabs.rhs.protocol.http.HttpSession;
 import co.casterlabs.rhs.protocol.websocket.Websocket;
@@ -86,8 +86,8 @@ public class EchoServlet extends HttpServlet {
 
                     request.append(
                         String.format(
-                            "%s %s\n\n",
-                            session.method(), session.uri().rawPath
+                            "GET %s\n\n",
+                            session, session.uri().rawPath
                         )
                     );
 

@@ -27,7 +27,7 @@ import co.casterlabs.rakurai.json.validation.JsonValidationException;
 import co.casterlabs.rhs.HttpMethod;
 import co.casterlabs.rhs.HttpStatus;
 import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
-import co.casterlabs.rhs.protocol.http.HeaderValue;
+import co.casterlabs.rhs.protocol.HeaderValue;
 import co.casterlabs.rhs.protocol.http.HttpResponse;
 import co.casterlabs.rhs.protocol.http.HttpSession;
 import co.casterlabs.rhs.protocol.websocket.Websocket;
