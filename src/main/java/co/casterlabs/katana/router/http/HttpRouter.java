@@ -3,15 +3,10 @@ package co.casterlabs.katana.router.http;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.security.cert.CertificateExpiredException;
-import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -223,40 +218,40 @@ public class HttpRouter implements HttpProtoHandler, WebsocketHandler, KatanaRou
         }
         if (this.autoIssuer == null) {
             this.certificateChecker = AsyncTask.create(() -> {
-                final Date MONTH_FROM_NOW = Date.from(Instant.now().plus(28, ChronoUnit.DAYS));
-
+                final long MONTH = TimeUnit.DAYS.toMillis(28);
                 while (true) {
                     try {
-                        TimeUnit.HOURS.sleep(8);
-                    } catch (InterruptedException ignored) {
-                        return;
-                    }
+                        X509ExtendedKeyManager keyManager = this.factory.getKeyManager().get();
+                        String[] aliases = keyManager.getClientAliases("RSA", null);
 
-                    X509ExtendedKeyManager keyManager = this.factory.getKeyManager().get();
-                    String[] aliases = keyManager.getClientAliases("RSA", null);
-
-                    boolean certsGoingToExpire = false;
-                    for (String alias : aliases) {
-                        X509Certificate[] chain = keyManager.getCertificateChain(alias);
-                        for (X509Certificate cert : chain) {
-                            try {
-                                cert.checkValidity(MONTH_FROM_NOW);
-                            } catch (CertificateExpiredException e) {
-                                certsGoingToExpire = true;
-                            } catch (CertificateNotYetValidException ignored) {}
+                        boolean certsGoingToExpire = false;
+                        for (String alias : aliases) {
+                            X509Certificate[] chain = keyManager.getCertificateChain(alias);
+                            for (X509Certificate cert : chain) {
+                                long notAfter = cert.getNotAfter().getTime();
+                                if (notAfter - System.currentTimeMillis() <= MONTH) {
+                                    certsGoingToExpire = true;
+                                    break;
+                                }
+                            }
                         }
-                    }
 
-                    if (!certsGoingToExpire) {
-                        continue; // We'll check again in a little bit.
-                    }
+                        if (!certsGoingToExpire) {
+                            // We'll check again in a little bit.
+                            continue;
+                        }
 
-                    try {
                         logger.info("Certificates are going to expire! Renewing automagically...");
                         this.autoIssueCertificates();
                         logger.info("Certificates renewed successfully! Auto swapping them in a few seconds.");
                     } catch (IssuanceException e) {
                         logger.fatal("Couldn't renew certificate. This is bad!\n%s", e);
+                    } catch (Throwable t) {
+                        logger.warn("Uncaught:\n%s", t);
+                    } finally {
+                        try {
+                            TimeUnit.HOURS.sleep(8);
+                        } catch (InterruptedException ignored) {}
                     }
                 }
             });
