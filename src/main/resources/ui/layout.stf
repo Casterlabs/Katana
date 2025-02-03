@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Katana - [$title]</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/main.js"></script>
+    <script>
+        function newRouter(type) {
+            const newName = prompt("Enter the name of the new router");
+            if (!newName) return;
+
+            const form = document.querySelector("#new-router");
+            form.type.value = type;
+            form.name.value = newName;
+            form.setAttribute("action", `/router/${encodeURI(form.name.value)}/main`);
+            form.submit();
+        }
+
+        function deleteRouter(name) {
+            if (!confirm(`Are you sure you wish to delete ${name}?`)) return;
+
+            const form = document.querySelector("#action");
+            form.setAttribute("action", `/router/${encodeURI(name)}/_delete`);
+            form.submit();
+        }
+
+        function doAction(name) {
+            const form = document.querySelector("#action");
+            form.setAttribute("action", `/action/${name}`);
+            form.submit();
+        }
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <h2>Navigation</h2>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li>Routers
+                    <ul>
+                        [#each nav.routers as router]
+                        [#if router.isHTTP]
+                        <li>
+                            <a href="/router/[$router.name]">[$router.name] (<b>[$router.type]</b>)</a>
+                            <button title="Delete" type="button"
+                                style="padding: 1px 2px; margin-top: 0; background-color: transparent;"
+                                onclick="deleteRouter('[$router.name]')">
+                                🗑️
+                            </button>
+                            <ul>
+                                <li><a href="/router/[$router.name]/ssl">SSL</a></li>
+                                <li><a href="/router/[$router.name]/servlets">Servlets</a></li>
+                            </ul>
+                        </li>
+                        [/]
+                        [#if router.isUI]
+                        <li>
+                            <a href="/router/[$router.name]"><b>[$router.type]</b></a>
+                        </li>
+                        [/]
+                        [/]
+                        <li>
+                            <button type="button" style="padding: 1px 2px; margin-top: 0; background-color: seagreen;"
+                                onclick="newRouter('HTTP')">
+                                + HTTP
+                            </button>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+            <button type="button" onclick="doAction('reload?backTo=' + encodeURIComponent(window.location.pathname))">
+                Apply Changes
+            </button>
+        </nav>
+        <main>
+            [$content]
+        </main>
+    </div>
+    <form id="new-router" method="POST" style="display: none;">
+        <input type="text" name="type" value="" />
+        <input type="text" name="name" value="" />
+    </form>
+    <form id="action" method="POST" style="display: none;"></form>
+</body>
+
+</html>

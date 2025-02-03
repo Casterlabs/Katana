@@ -116,19 +116,25 @@
 		<dependency>
 			<groupId>co.casterlabs.rakurai-http-server</groupId>
 			<artifactId>core</artifactId>
-			<version>18af5eb</version>
+			<version>e060139</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.rakurai-http-server.proto</groupId>
 			<artifactId>http</artifactId>
-			<version>18af5eb</version>
+			<version>e060139</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.rakurai-http-server.proto</groupId>
 			<artifactId>websocket</artifactId>
-			<version>18af5eb</version>
+			<version>e060139</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>co.casterlabs.rakurai-http-server.proto</groupId>
+			<artifactId>api-framework</artifactId>
+			<version>e060139</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -237,6 +243,12 @@
 			<groupId>com.github.e3ndr</groupId>
 			<artifactId>FastLoggingFramework</artifactId>
 			<version>1.12.1</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.github.e3ndr</groupId>
+			<artifactId>simple-template-format</artifactId>
+			<version>b14c803</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>

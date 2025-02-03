@@ -32,8 +32,8 @@ public class FileServlet extends HttpServlet {
 //        @JsonClass("use_miki")
 //        public boolean useMiki = true;
 
-        public String file;
-        public String path;
+        public String file = "file.html";
+        public String path = "/file";
 
         @JsonValidate
         private void $validate() {

@@ -32,10 +32,10 @@ public class KatanaCommands implements CommandListener<Void> {
         boolean noPreserve = (event.getArgs().length > 0) && event.getArgs()[0].equalsIgnoreCase("no-preserve");
         if (noPreserve) {
             this.katana.stop(true);
-            this.katana.start();
         }
 
         this.katana.getLauncher().loadConfig(this.katana);
+        this.katana.start();
         this.katana.getLogger().info("Reloaded config!");
     }
 

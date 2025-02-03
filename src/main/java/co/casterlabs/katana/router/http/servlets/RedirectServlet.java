@@ -29,10 +29,10 @@ public class RedirectServlet extends HttpServlet {
     @JsonClass(exposeAll = true)
     public static class HostConfiguration {
         @JsonField("redirect_url")
-        public String redirectUrl;
+        public String redirectUrl = "https://example.com";
 
         @JsonField("include_path")
-        public boolean includePath;
+        public boolean includePath = false;
 
         @JsonValidate
         private void $validate() {

@@ -1,0 +1,13 @@
+<h1>[$name] - Configuration</h1>
+<form id="form" method="POST" action="/router/[$name]/[$section]">
+    <input type="text" name="type" value="[$type]" style="display: none;" />
+    <input type="text" name="name" value="[$name]" style="display: none;" />
+</form>
+<script>
+    const config = [$config];
+    const form = initForm();
+
+    appendCheckbox(form, "Is Behind Proxy", "is_behind_proxy", config.is_behind_proxy);
+    appendNumber(form, "Port", "port", config.port);
+
+</script>

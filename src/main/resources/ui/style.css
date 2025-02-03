@@ -1,0 +1,93 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    display: flex;
+}
+
+.section {
+    border-style: solid;
+    border-top-width: 1px;
+    border-right-width: 0px;
+    border-bottom-width: 0px;
+    border-left-width: 0px;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #f0f0f0;
+    padding: 20px;
+    min-height: calc(100vh - 40px);
+}
+
+.sidebar h2 {
+    margin-top: 0;
+}
+
+.sidebar ul {
+    padding-left: 0;
+}
+
+.sidebar ul ul {
+    padding-left: 20px;
+}
+
+.sidebar a {
+    color: #333;
+}
+
+main {
+    flex-grow: 1;
+    padding: 20px;
+}
+
+form {
+    width: 500px;
+}
+
+label {
+    display: block;
+    margin-top: 10px;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="password"],
+select {
+    width: 100%;
+    padding: 5px;
+    margin-top: 5px;
+}
+
+input[type="checkbox"] {
+    margin-top: 5px;
+}
+
+button {
+    margin-top: 10px;
+    padding: 5px 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.multi-select {
+    border: 1px solid #ccc;
+    padding: 5px;
+    margin-top: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.multi-select label {
+    display: block;
+    margin: 5px 0;
+}

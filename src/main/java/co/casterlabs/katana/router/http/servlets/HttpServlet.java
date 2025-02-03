@@ -1,5 +1,6 @@
 package co.casterlabs.katana.router.http.servlets;
 
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -73,6 +74,10 @@ public abstract class HttpServlet {
         } catch (InstantiationException | IllegalAccessException e) {
             throw new IllegalStateException("Cannot instantiate servlet", e);
         }
+    }
+
+    public static Collection<String> types() {
+        return SERVLETS.keySet();
     }
 
 }

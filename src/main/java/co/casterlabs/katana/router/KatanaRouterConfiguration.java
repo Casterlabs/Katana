@@ -12,6 +12,7 @@ public interface KatanaRouterConfiguration {
 
     public static enum RouterType {
         HTTP,
+        UI,
     }
 
     @JsonClass(exposeAll = true)

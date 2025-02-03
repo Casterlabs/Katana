@@ -140,22 +140,22 @@ public class ProxyServlet extends HttpServlet {
     @JsonClass(exposeAll = true)
     public static class HostConfiguration {
         @JsonField("proxy_url")
-        public String proxyUrl;
+        public String proxyUrl = "https://example.com";
 
         @JsonField("proxy_path")
-        public String proxyPath;
+        public String proxyPath = null;
 
         @JsonField("include_path")
-        public boolean includePath;
+        public boolean includePath = false;
 
         @JsonField("forward_ip")
-        public boolean forwardIp;
+        public boolean forwardIp = false;
 
         @JsonField("allow_http")
-        public boolean allowHttp;
+        public boolean allowHttp = true;
 
         @JsonField("allow_websockets")
-        public boolean allowWebsockets;
+        public boolean allowWebsockets = false;
 
         @JsonField("ignore_bad_ssl")
         public boolean ignoreBadSsl = false;
@@ -241,12 +241,8 @@ public class ProxyServlet extends HttpServlet {
         }
 
         // If the path doesn't match don't serve.
-        // A NULL path is wildcard.
-        if ((this.config.proxyPath != null) && !session.uri().path.matches(this.config.proxyPath)) {
-            return false;
-        }
-
-        return true;
+        // A NULL or blank path is wildcard.
+        return this.config.proxyPath == null || this.config.proxyPath.isEmpty() || session.uri().path.matches(this.config.proxyPath);
     }
 
     @Override

@@ -1,0 +1,143 @@
+<h1>[$name] - Servlet Configuration</h1>
+<form id="form" method="POST" action="/router/[$name]/[$section]">
+    <input type="text" name="type" value="[$type]" style="display: none;" />
+    <input type="text" name="name" value="[$name]" style="display: none;" />
+</form>
+<script>
+    const config = [$config];
+    const form = initForm();
+
+    function prettifyName(name) {
+        name = name.replace(/_/g, " ")
+        name = name.substring(0, 1).toUpperCase() + name.substring(1).toLowerCase();
+        return name;
+    }
+
+    const servletsContainer = makeMultiContainer(form, "Servlets");
+
+    function appendServlet(servlet) {
+        const entry = makeMultiContainerEntry(servletsContainer);
+        const entryId = Math.random().toString(36).substring(7);
+
+        const header = document.createElement('h2');
+        header.innerText = servlet.type.toUpperCase();
+        header.style.marginBottom = "0";
+        entry.appendChild(header);
+
+        appendText(entry, "Type", `servlets.${entryId}.type`, servlet.type).parentElement.style = "display: none;";
+
+        appendNumber(entry, "Priority", `servlets.${entryId}.priority`, servlet.priority);
+
+        {
+            const hostnamesContainer = makeMultiContainer(entry, "Hostnames");
+
+            function appendHostname(hostname) {
+                const entry = makeMultiContainerEntry(hostnamesContainer);
+                appendText(entry, "", `servlets.${entryId}.hostnames`, hostname);
+            }
+
+            appendButton(entry, "Add Hostname", function () {
+                appendHostname("");
+            });
+
+            for (const hostname of servlet.hostnames) {
+                appendHostname(hostname);
+            }
+        }
+
+        {
+            const corsAllowedHostsContainer = makeMultiContainer(entry, "CORS Allowed Hosts");
+
+            function appendCorsHost(host) {
+                const entry = makeMultiContainerEntry(corsAllowedHostsContainer);
+                appendText(entry, "", `servlets.${entryId}.cors_allowed_hosts`, host);
+            }
+
+            appendButton(entry, "Add CORS Host", function () {
+                appendCorsHost("");
+            });
+
+            for (const host of servlet.cors_allowed_hosts) {
+                appendCorsHost(host);
+            }
+        }
+
+        const ALREADY_ADDED = ["type", "priority", "hostnames", "cors_allowed_hosts"];
+
+        for (const [key, value] of Object.entries(servlet)) {
+            if (ALREADY_ADDED.includes(key)) {
+                continue;
+            }
+
+            if (Array.isArray(value)) {
+                const container = makeMultiContainer(entry, prettifyName(key));
+
+                function append(v) {
+                    const entry = makeMultiContainerEntry(container);
+                    appendText(entry, "", `servlets.${entryId}.${key}`, v);
+                }
+
+                appendButton(entry, "Add", function () {
+                    append("");
+                });
+
+                for (const v of value) {
+                    append(v);
+                }
+            } else if (typeof value == "number") {
+                appendNumber(entry, prettifyName(key), `servlets.${entryId}.${key}`, value);
+            } else if (typeof value == "boolean") {
+                appendCheckbox(entry, prettifyName(key), `servlets.${entryId}.${key}`, value);
+            } else {
+                appendText(entry, prettifyName(key), `servlets.${entryId}.${key}`, value);
+            }
+        }
+
+        // switch (servlet.type) {
+        //     case "file":
+        //         appendText(entry, "Path", `servlets.${entryId}.path`, servlet.path);
+        //         appendText(entry, "File", `servlets.${entryId}.file`, servlet.file);
+        //         break;
+
+        //     case "redirect":
+        //         appendText(entry, "Include Path", `servlets.${entryId}.include_path`, servlet.include_path);
+        //         appendText(entry, "Redirect URL", `servlets.${entryId}.redirect_url`, servlet.redirect_url);
+        //         break;
+
+        //     case "static":
+        //         appendText(entry, "Directory", `servlets.${entryId}.directory`, servlet.directory);
+        //         appendCheckbox(entry, "Require File Extensions", `servlets.${entryId}.require_file_extensions`, servlet.require_file_extensions);
+        //         break;
+
+        //     case "proxy":
+        //         appendText(entry, "Proxy URL", `servlets.${entryId}.proxy_url`, servlet.proxy_url);
+        //         appendText(entry, "Proxy Path", `servlets.${entryId}.proxy_path`, servlet.proxy_path || "").setAttribute("placeholder", "Leave blank for wildcard");
+        //         appendCheckbox(entry, "Include Path", `servlets.${entryId}.include_path`, servlet.include_path);
+        //         appendCheckbox(entry, "Forward IP", `servlets.${entryId}.forward_ip`, servlet.forward_ip);
+        //         appendCheckbox(entry, "Allow HTTP", `servlets.${entryId}.allow_http`, servlet.allow_http);
+        //         appendCheckbox(entry, "Allow Websockets", `servlets.${entryId}.allow_websockets`, servlet.allow_websockets);
+        //         appendCheckbox(entry, "Ignore Bad SSL", `servlets.${entryId}.ignore_bad_ssl`, servlet.ignore_bad_ssl);
+        //         appendCheckbox(entry, "Forward Host", `servlets.${entryId}.forward_host`, servlet.forward_host);
+        //         appendCheckbox(entry, "Follow Redirects", `servlets.${entryId}.follow_redirects`, servlet.follow_redirects);
+        //         appendCheckbox(entry, "Solve for IP", `servlets.${entryId}.solve_for_ip`, servlet.solve_for_ip);
+        //         break;
+        // }
+    }
+
+    for (const servlet of config.servlets) {
+        appendServlet(servlet);
+    }
+
+    const DEFAULT_SERVLET_CONFIGS = [$DEFAULT_SERVLET_CONFIGS];
+    for (const type of [$ALL_SERVLET_TYPES]) {
+        appendButton(form, `Add ${prettifyName(type)}`, function () {
+            appendServlet({
+                type: type,
+                priority: 1,
+                hostnames: ['*'],
+                cors_allowed_hosts: ['*'],
+                ...DEFAULT_SERVLET_CONFIGS[type],
+            });
+        });
+    }
+</script>

@@ -21,12 +21,6 @@ import xyz.e3ndr.fastloggingframework.logging.LogLevel;
 public class Launcher implements Runnable {
 
     @Option(names = {
-            "-c",
-            "--config"
-    }, description = "The config file to use.")
-    private File file = new File("config.json");
-
-    @Option(names = {
             "-t",
             "--trace"
     }, description = "Forcefully enables trace logging across all of the servers.")
@@ -69,28 +63,28 @@ public class Launcher implements Runnable {
     public void loadConfig(Katana katana) {
         JsonArray json;
 
-        if (this.file.exists()) {
-            json = Util.readFileAsJson(this.file, JsonArray.class);
+        if (Katana.CONFIG_FILE.exists()) {
+            json = Util.readFileAsJson(Katana.CONFIG_FILE, JsonArray.class);
         } else {
             // Auto populate a default.
             json = JsonArray.of(
                 new JsonObject()
                     .put("type", "http")
-                    .put("logs_dir", "./logs")
                     .put(
                         "servlets",
                         JsonArray.of(
                             new JsonObject()
                                 .put("type", "static")
                                 .put("hostnames", JsonArray.of("*"))
-                                .put("directory", "./www")
+                                .put("directory", "./www"),
+                            JsonObject.singleton("type", "ui")
                         )
                     )
             );
         }
 
         String newConfigJson = katana.init(json);
-        Files.write(this.file.toPath(), newConfigJson.getBytes(StandardCharsets.UTF_8));
+        Files.write(Katana.CONFIG_FILE.toPath(), newConfigJson.getBytes(StandardCharsets.UTF_8));
 
         Katana.getInstance().getLogger().info("Updated config.");
     }

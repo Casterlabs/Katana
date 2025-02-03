@@ -55,10 +55,10 @@ public class WebhookToWSServlet extends HttpServlet {
 
     @JsonClass(exposeAll = true)
     public static class HostConfiguration {
-        public String path;
+        public String path = "/";
 
         @JsonField("websocket_secret")
-        public String websocketSecret;
+        public String websocketSecret = "abc123";
 
         @JsonField("allowed_methods")
         public List<HttpMethod> allowedMethods = Arrays.asList(

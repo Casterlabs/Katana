@@ -38,12 +38,12 @@ public class StaticServlet extends HttpServlet {
     @JsonClass(exposeAll = true)
     public static class HostConfiguration {
         @JsonField("require_file_extensions")
-        public boolean requireFileExtensions;
+        public boolean requireFileExtensions = false;
 
 //        @JsonField("use_miki")
 //        public boolean useMiki = false;
 
-        public String directory;
+        public String directory = "www";
 
         @JsonValidate
         private void $validate() {

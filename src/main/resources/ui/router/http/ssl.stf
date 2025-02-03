@@ -1,0 +1,43 @@
+<h1>[$name] - SSL Configuration</h1>
+<form id="form" method="POST" action="/router/[$name]/[$section]">
+    <input type="text" name="type" value="[$type]" style="display: none;" />
+    <input type="text" name="name" value="[$name]" style="display: none;" />
+</form>
+<script>
+    const config = [$config];
+    const form = initForm();
+
+    appendCheckbox(form, "SSL Enabled", "ssl.enabled", config.ssl.enabled);
+    appendText(form, "Private Key File", `ssl.private_key_file`, config.ssl.private_key_file);
+    appendText(form, "Certificate File", `ssl.certificate_file`, config.ssl.certificate_file);
+    appendText(form, "Trust Chain File", `ssl.trust_chain_file`, config.ssl.trust_chain_file);
+
+    appendNumber(form, "SSL Port", "ssl.port", config.ssl.port);
+
+    appendCheckbox(form, "Allow Insecure", "ssl.allow_insecure", config.ssl.allow_insecure);
+    appendCheckbox(form, "Force SSL", "ssl.force_ssl", config.ssl.force_ssl);
+
+    appendNumber(form, "DH Size", "ssl.dh_size", config.ssl.dh_size);
+
+    const enabledCipherSuitesSection = makeSection(form, "Enabled Cipher Suites");
+    enabledCipherSuitesSection.style = "max-height: 200px; overflow-y: auto;";
+    for (const suite of [$ALL_CIPHER_SUITES]) {
+        appendCheckbox(enabledCipherSuitesSection, suite, `ssl.enabled_cipher_suites.${suite}`, config.ssl.enabled_cipher_suites.includes(suite));
+    }
+
+    const tlsSection = makeSection(form, "TLS Versions");
+    tlsSection.style = "max-height: 200px; overflow-y: auto;";
+    for (const version of [$ALL_TLS_VERSIONS]) {
+        appendCheckbox(tlsSection, version, `ssl.tls.${version}`, config.ssl.tls.includes(version));
+    }
+
+    const caiSection = makeSection(form, "Certificate Auto Issuer");
+
+    appendCheckbox(caiSection, "Enable Auto Issuer", "ssl.certificate_auto_issuer.enabled", config.ssl.certificate_auto_issuer.enabled);
+    appendText(caiSection, "Account Email", "ssl.certificate_auto_issuer.account_email", config.ssl.certificate_auto_issuer.account_email);
+
+    const methodInput = appendText(caiSection, "Method", `ssl.certificate_auto_issuer.method`, config.ssl.certificate_auto_issuer.method);
+    methodInput.setAttribute("readonly", "readonly");
+    methodInput.setAttribute("disabled", "disabled");
+
+</script>
