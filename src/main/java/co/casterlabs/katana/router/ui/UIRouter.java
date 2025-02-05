@@ -172,10 +172,6 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
         }
 
         JsonObject vars = new JsonObject()
-            .put("ALL_CIPHER_SUITES", ALL_CIPHER_SUITES.toString())
-            .put("ALL_TLS_VERSIONS", ALL_TLS_VERSIONS.toString())
-            .put("ALL_SERVLET_TYPES", ALL_SERVLET_TYPES.toString())
-            .put("DEFAULT_SERVLET_CONFIGS", DEFAULT_SERVLET_CONFIGS.toString())
             .put("title", title)
             .put("content", content)
             .put("auth", Rson.DEFAULT.toJson(data.attachment()))
@@ -294,6 +290,10 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
         }
 
         JsonObject vars = new JsonObject()
+            .put("ALL_CIPHER_SUITES", ALL_CIPHER_SUITES.toString())
+            .put("ALL_TLS_VERSIONS", ALL_TLS_VERSIONS.toString())
+            .put("ALL_SERVLET_TYPES", ALL_SERVLET_TYPES.toString())
+            .put("DEFAULT_SERVLET_CONFIGS", DEFAULT_SERVLET_CONFIGS.toString())
             .put("section", section)
             .put("name", routerName)
             .put("type", routerType)
