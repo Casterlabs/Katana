@@ -7,7 +7,10 @@ LABEL org.opencontainers.image.source="https://github.com/casterlabs/katana"
 COPY ./docker/* /home/container
 COPY ./target/Katana.jar /home/container
 RUN chmod +x docker_launch.sh
+RUN mkdir data
 
 # entrypoint
 CMD [ "./docker_launch.sh" ]
-EXPOSE 8000/tcp
+EXPOSE 81/tcp
+EXPOSE 80/tcp
+EXPOSE 443/tcp

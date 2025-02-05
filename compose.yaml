@@ -3,8 +3,11 @@ services:
     image: ghcr.io/casterlabs/katana:latest
     restart: always
     volumes:
-      - ./config.json:/home/container/config.json
+      - data:/home/container/data
     ports:
       # - 81:81 # Management UI
       - 80:80
       - 443:443
+
+volumes:
+  data:
