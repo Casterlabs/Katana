@@ -216,7 +216,7 @@ public class HttpRouter implements HttpProtoHandler, WebsocketHandler, KatanaRou
         if (this.certificateWatcher != null) {
             this.certificateWatcher.start();
         }
-        if (this.autoIssuer == null) {
+        if (this.autoIssuer != null) {
             this.certificateChecker = AsyncTask.create(() -> {
                 final long MONTH = TimeUnit.DAYS.toMillis(28);
                 while (true) {
