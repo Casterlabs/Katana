@@ -224,7 +224,7 @@ public class AuthPreprocessor implements Preprocessor.Http<AuthorizedUser> {
         }
         String token = new String(tokenCh);
 
-        this.authCookies.put(token, new AuthorizedUser(System.currentTimeMillis() + expiresInSeconds, username));
+        this.authCookies.put(token, new AuthorizedUser(System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(expiresInSeconds), username));
         return String.format("%s=%s; Max-Age=%d; Path=/; SameSite=Lax; HttpOnly", COOKIE_NAME, token, expiresInSeconds);
     }
 
