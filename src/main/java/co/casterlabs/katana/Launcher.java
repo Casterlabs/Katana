@@ -76,10 +76,10 @@ public class Launcher implements Runnable {
                             new JsonObject()
                                 .put("type", "static")
                                 .put("hostnames", JsonArray.of("*"))
-                                .put("directory", "./www"),
-                            JsonObject.singleton("type", "ui")
+                                .put("directory", "./www")
                         )
-                    )
+                    ),
+                JsonObject.singleton("type", "ui")
             );
         }
 
