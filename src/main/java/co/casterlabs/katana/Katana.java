@@ -59,7 +59,7 @@ public class Katana {
                     commandRegistry.execute(in.nextLine());
                 } catch (CommandNameException | CommandExecutionException | ArgumentsLengthException e) {
                     logger.exception(e);
-                } catch (Exception ignored) {}
+                }
             }
         });
     }
