@@ -17,6 +17,7 @@ import co.casterlabs.katana.Util;
 import co.casterlabs.katana.router.KatanaRouter;
 import co.casterlabs.katana.router.http.RakuraiTaskExecutor;
 import co.casterlabs.katana.router.http.servlets.HttpServlet;
+import co.casterlabs.katana.router.ui.AuthPreprocessor.AuthorizedUser;
 import co.casterlabs.rakurai.json.Rson;
 import co.casterlabs.rakurai.json.element.JsonArray;
 import co.casterlabs.rakurai.json.element.JsonElement;
@@ -69,22 +70,26 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     }
 
     // @formatter:off
-    private static SimpleTemplate TEMPLATE_LAYOUT               = STFParser.parse(load("/layout.stf"));
-    private static SimpleTemplate TEMPLATE_CONFIG_UI            = STFParser.parse(load("/router/ui/main.stf"));
-    private static SimpleTemplate TEMPLATE_CONFIG_HTTP          = STFParser.parse(load("/router/http/main.stf"));
-    private static SimpleTemplate TEMPLATE_CONFIG_HTTP_SSL      = STFParser.parse(load("/router/http/ssl.stf"));
-    private static SimpleTemplate TEMPLATE_CONFIG_HTTP_SERVLETS = STFParser.parse(load("/router/http/servlets.stf"));
-    
-    private static String PAGE_MAIN    = load("/main.html");
-    private static String RESOURCE_CSS = load("/style.css");
-    private static String RESOURCE_JS  = load("/main.js");
+    private static final SimpleTemplate TEMPLATE_LAYOUT               = STFParser.parse(load("/layout.stf"));
+    private static final SimpleTemplate TEMPLATE_CONFIG_UI            = STFParser.parse(load("/router/ui/main.stf"));
+	private static final SimpleTemplate TEMPLATE_CONFIG_UI_LOGINS     = STFParser.parse(load("/router/ui/logins.stf"));
+    private static final SimpleTemplate TEMPLATE_CONFIG_UI_OAUTH      = STFParser.parse(load("/router/ui/oauth.stf"));
+    private static final SimpleTemplate TEMPLATE_CONFIG_HTTP          = STFParser.parse(load("/router/http/main.stf"));
+    private static final SimpleTemplate TEMPLATE_CONFIG_HTTP_SSL      = STFParser.parse(load("/router/http/ssl.stf"));
+    private static final SimpleTemplate TEMPLATE_CONFIG_HTTP_SERVLETS = STFParser.parse(load("/router/http/servlets.stf"));
+
+    private static final String PAGE_LOGIN   = load("/login.html");
+
+    private static final String PAGE_MAIN    = load("/main.html");
+    private static final String RESOURCE_CSS = load("/style.css");
+    private static final String RESOURCE_JS  = load("/main.js");
     // @formatter:on
 
     private FastLogger logger;
     private Katana katana;
 
     private HttpServer server;
-
+    private AuthPreprocessor auth = new AuthPreprocessor(this);
     private UIRouterConfiguration config;
 
     @SneakyThrows
@@ -98,11 +103,11 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
         this.katana = katana;
 
         ApiFramework framework = new ApiFramework();
-        framework.instantiatePreprocessor(AuthPreprocessor.class, new AuthPreprocessor(this));
+        framework.instantiatePreprocessor(AuthPreprocessor.class, this.auth);
         framework.register(this);
 
         this.server = new HttpServerBuilder()
-            .withPort(config.getPort())
+            .withPort(config.port)
             .withServerHeader(Katana.SERVER_DECLARATION)
             .withTaskExecutor(RakuraiTaskExecutor.INSTANCE)
             .with(new HttpProtocol(), framework.httpHandler)
@@ -148,7 +153,7 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     /* Pages            */
     /* ---------------- */
 
-    private HttpResponse renderPage(String title, String content) {
+    private HttpResponse renderPage(EndpointData<AuthorizedUser> data, String title, String content) {
         JsonArray navConfigs = new JsonArray();
 
         for (JsonElement routerElement : loadConfig()) {
@@ -169,6 +174,7 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
         JsonObject vars = new JsonObject()
             .put("title", title)
             .put("content", content)
+            .put("auth", Rson.DEFAULT.toJson(data.attachment()))
             .put("nav", JsonObject.singleton("routers", navConfigs));
 
         return HttpResponse.newFixedLengthResponse(
@@ -180,14 +186,50 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     @HttpEndpoint(path = ".*", priority = -100, allowedMethods = {
             HttpMethod.GET
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onGetIndex(HttpSession session, EndpointData<Void> data) {
-        return renderPage("Home", PAGE_MAIN);
+    public HttpResponse onGetIndex(HttpSession session, EndpointData<AuthorizedUser> data) {
+        return renderPage(data, "Home", PAGE_MAIN);
+    }
+
+    @HttpEndpoint(path = "/logout")
+    public HttpResponse onLogout(HttpSession session, EndpointData<AuthorizedUser> data) {
+        return HttpResponse.newFixedLengthResponse(StandardHttpStatus.SEE_OTHER)
+            .header("Location", "/login")
+            .header("Set-Cookie", String.format("%s=deleted; Path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly", AuthPreprocessor.COOKIE_NAME));
+    }
+
+    @HttpEndpoint(path = "/login")
+    public HttpResponse onLoginPage(HttpSession session, EndpointData<AuthorizedUser> data) {
+        if (!this.config.oauth.enabled) {
+            // We don't have the option for OAuth, so just render the basic login page.
+            return HttpResponse.newFixedLengthResponse(StandardHttpStatus.SEE_OTHER)
+                .header("Location", "/login/basic");
+        }
+        return HttpResponse.newFixedLengthResponse(
+            StandardHttpStatus.OK,
+            PAGE_LOGIN
+        ).mime("text/html; charset=UTF-8");
+    }
+
+    @HttpEndpoint(path = "/login/basic")
+    public HttpResponse onBasicLoginPage(HttpSession session, EndpointData<AuthorizedUser> data) {
+        return this.auth.handleBasic(session);
+    }
+
+    @SneakyThrows
+    @HttpEndpoint(path = "/login/oauth")
+    public HttpResponse onOAuthLoginPage(HttpSession session, EndpointData<AuthorizedUser> data) {
+        if (!this.config.oauth.enabled) {
+            // We don't have the option for OAuth, so just render the basic login page.
+            return HttpResponse.newFixedLengthResponse(StandardHttpStatus.SEE_OTHER)
+                .header("Location", "/login/basic");
+        }
+        return this.auth.handleOAuth(session);
     }
 
     @HttpEndpoint(path = "/action/reload", priority = 100, allowedMethods = {
             HttpMethod.POST
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onReload(HttpSession session, EndpointData<Void> data) throws IOException {
+    public HttpResponse onReload(HttpSession session, EndpointData<AuthorizedUser> data) throws IOException {
         this.katana.getLauncher().loadConfig(this.katana);
         this.katana.start();
 
@@ -200,7 +242,7 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     @HttpEndpoint(path = "/router/:name", allowedMethods = {
             HttpMethod.GET
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onGetConfigMain(HttpSession session, EndpointData<Void> data) {
+    public HttpResponse onGetConfigMain(HttpSession session, EndpointData<AuthorizedUser> data) {
         return this.onGetConfigPage(session, data);
     }
 
@@ -208,7 +250,7 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     @HttpEndpoint(path = "/router/:name/:section", allowedMethods = {
             HttpMethod.GET
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onGetConfigPage(HttpSession session, EndpointData<Void> data) {
+    public HttpResponse onGetConfigPage(HttpSession session, EndpointData<AuthorizedUser> data) {
         String name = data.uriParameters().get("name");
         String section = data.uriParameters().getOrDefault("section", "main");
         JsonObject router = findInConfig(name);
@@ -232,7 +274,17 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
                 }
                 break;
             case "UI": {
-                template = TEMPLATE_CONFIG_UI;
+                switch (section) {
+                    case "logins":
+                        template = TEMPLATE_CONFIG_UI_LOGINS;
+                        break;
+                    case "oauth":
+                        template = TEMPLATE_CONFIG_UI_OAUTH;
+                        break;
+                    default:
+                        template = TEMPLATE_CONFIG_UI;
+                        break;
+                }
                 break;
             }
         }
@@ -248,6 +300,7 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
             .put("config", router.toString());
 
         return renderPage(
+            data,
             "Config - " + name,
             template.render(vars)
         );
@@ -256,7 +309,7 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     @HttpEndpoint(path = "/router/:name/_delete", priority = 100, allowedMethods = {
             HttpMethod.POST
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onDeleteRouter(HttpSession session, EndpointData<Void> data) throws IOException {
+    public HttpResponse onDeleteRouter(HttpSession session, EndpointData<AuthorizedUser> data) throws IOException {
         String routerName = data.uriParameters().get("name");
 
         JsonArray newConfig = new JsonArray();
@@ -277,7 +330,7 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     @HttpEndpoint(path = "/router/:name/:section", allowedMethods = {
             HttpMethod.POST
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onUpdateConfigPage(HttpSession session, EndpointData<Void> data) throws IOException {
+    public HttpResponse onUpdateConfigPage(HttpSession session, EndpointData<AuthorizedUser> data) throws IOException {
         String routerName = data.uriParameters().get("name");
         String section = data.uriParameters().get("section");
 
@@ -411,14 +464,35 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
             }
 
             case "UI": {
-                routerConfig.put("port", formIntegerValue(form.get("port")));
-
-                JsonObject logins = new JsonObject();
-                for (JsonElement value : form.getObject("logins").values()) {
-                    JsonObject login = value.getAsObject(); // "username", "password"
-                    logins.put(login.getString("username"), login.getString("password"));
+                if (form.containsKey("port")) {
+                    routerConfig.put("port", formIntegerValue(form.get("port")));
+                    routerConfig.put("is_behind_proxy", formCheckboxValue(form.get("is_behind_proxy")));
                 }
-                routerConfig.put("logins", logins);
+
+                if (form.containsKey("logins")) {
+                    JsonObject logins = new JsonObject();
+                    for (JsonElement value : form.getObject("logins").values()) {
+                        JsonObject login = value.getAsObject(); // "username", "password"
+                        logins.put(login.getString("username"), login.getString("password"));
+                    }
+                    routerConfig.put("logins", logins);
+                }
+
+                if (form.containsKey("oauth")) {
+                    JsonObject formOAuth = form.getObject("oauth");
+                    JsonObject routerOAuth = routerConfig.getObject("oauth");
+
+                    routerOAuth.put("enabled", formCheckboxValue(formOAuth.get("enabled")));
+                    routerOAuth.put("client_id", formOAuth.getString("client_id"));
+                    routerOAuth.put("client_secret", formOAuth.getString("client_secret"));
+                    routerOAuth.put("authorization_url", formOAuth.getString("authorization_url"));
+                    routerOAuth.put("token_url", formOAuth.getString("token_url"));
+                    routerOAuth.put("user_info_url", formOAuth.getString("user_info_url"));
+                    routerOAuth.put("redirect_url", formOAuth.getString("redirect_url"));
+                    routerOAuth.put("scope", formOAuth.getString("scope"));
+                    routerOAuth.put("identifier", formOAuth.getString("identifier"));
+                    routerOAuth.put("allowed_user_ids", formArrayValue(formOAuth.get("allowed_user_ids")));
+                }
                 break;
             }
         }
@@ -436,7 +510,7 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     @HttpEndpoint(path = "/main.js", allowedMethods = {
             HttpMethod.GET
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onGetResourceMain(HttpSession session, EndpointData<Void> data) {
+    public HttpResponse onGetResourceMain(HttpSession session, EndpointData<AuthorizedUser> data) {
         return HttpResponse.newFixedLengthResponse(StandardHttpStatus.OK, RESOURCE_JS)
             .mime("text/javascript; charset=UTF-8");
     }
@@ -444,7 +518,7 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     @HttpEndpoint(path = "/style.css", allowedMethods = {
             HttpMethod.GET
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onGetResourceCss(HttpSession session, EndpointData<Void> data) {
+    public HttpResponse onGetResourceCss(HttpSession session, EndpointData<AuthorizedUser> data) {
         return HttpResponse.newFixedLengthResponse(StandardHttpStatus.OK, RESOURCE_CSS)
             .mime("text/css; charset=UTF-8");
     }

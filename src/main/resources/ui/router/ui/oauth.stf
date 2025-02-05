@@ -1,0 +1,39 @@
+<h1>[$name] - OAuth Configuration</h1>
+<form id="form" method="POST" action="/router/[$name]/[$section]">
+    <input type="text" name="type" value="[$type]" style="display: none;" />
+    <!-- <input type="text" name="type" value="[$name]" style="display: none;" /> -->
+</form>
+<script>
+    const config = [$config];
+    const form = initForm();
+
+    appendCheckbox(form, "Enabled", "oauth.enabled", config.oauth.enabled);
+
+    appendText(form, "Client ID", "oauth.client_id", config.oauth.client_id);
+    appendPassword(form, "Client Secret", "oauth.client_secret", config.oauth.client_secret);
+
+    appendText(form, "Authorization URL", "oauth.authorization_url", config.oauth.authorization_url);
+    appendText(form, "Token URL", "oauth.token_url", config.oauth.token_url);
+    appendText(form, "User Info URL", "oauth.user_info_url", config.oauth.user_info_url);
+
+    appendText(form, "Login Redirect URL", "oauth.redirect_url", config.oauth.redirect_url);
+
+    appendText(form, "Scope", "oauth.scope", config.oauth.scope);
+    appendText(form, "Identifier", "oauth.identifier", config.oauth.identifier);
+
+    const allowedUserIdsContainer = makeMultiContainer(form, "Allowed User IDs");
+
+    function appendAllowedUserId(userId) {
+        const entry = makeMultiContainerEntry(allowedUserIdsContainer);
+        appendText(entry, "User ID", `oauth.allowed_user_ids`, userId);
+    }
+
+    appendButton(form, "Add User ID", function () {
+        appendAllowedUserId("");
+    });
+
+    for (const userId of config.oauth.allowed_user_ids) {
+        appendAllowedUserId(userId);
+    }
+
+</script>

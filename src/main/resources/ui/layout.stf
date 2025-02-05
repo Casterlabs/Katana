@@ -38,7 +38,10 @@
 <body>
     <div class="container">
         <nav class="sidebar">
-            <h2>Navigation</h2>
+            <h2 style="margin: 0;">Navigation</h2>
+            <p style="margin-top: 0; font-size: .85em;">
+                Logged in as [$auth.name]. <a href="/logout">Logout</a>
+            </p>
             <ul>
                 <li><a href="/">Home</a></li>
                 <li>Routers
@@ -61,6 +64,10 @@
                         [#if router.isUI]
                         <li>
                             <a href="/router/[$router.name]"><b>[$router.type]</b></a>
+                            <ul>
+                                <li><a href="/router/[$router.name]/logins">Logins</a></li>
+                                <li><a href="/router/[$router.name]/oauth">OAuth</a></li>
+                            </ul>
                         </li>
                         [/]
                         [/]
