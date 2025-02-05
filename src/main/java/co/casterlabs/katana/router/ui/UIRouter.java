@@ -172,6 +172,10 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
         }
 
         JsonObject vars = new JsonObject()
+            .put("ALL_CIPHER_SUITES", ALL_CIPHER_SUITES.toString())
+            .put("ALL_TLS_VERSIONS", ALL_TLS_VERSIONS.toString())
+            .put("ALL_SERVLET_TYPES", ALL_SERVLET_TYPES.toString())
+            .put("DEFAULT_SERVLET_CONFIGS", DEFAULT_SERVLET_CONFIGS.toString())
             .put("title", title)
             .put("content", content)
             .put("auth", Rson.DEFAULT.toJson(data.attachment()))
@@ -242,15 +246,15 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     @HttpEndpoint(path = "/router/:name", allowedMethods = {
             HttpMethod.GET
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onGetConfigMain(HttpSession session, EndpointData<AuthorizedUser> data) {
-        return this.onGetConfigPage(session, data);
+    public HttpResponse onGetRouterMain(HttpSession session, EndpointData<AuthorizedUser> data) {
+        return this.onGetRouterSection(session, data);
     }
 
     @SneakyThrows
     @HttpEndpoint(path = "/router/:name/:section", allowedMethods = {
             HttpMethod.GET
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onGetConfigPage(HttpSession session, EndpointData<AuthorizedUser> data) {
+    public HttpResponse onGetRouterSection(HttpSession session, EndpointData<AuthorizedUser> data) {
         String name = data.uriParameters().get("name");
         String section = data.uriParameters().getOrDefault("section", "main");
         JsonObject router = findInConfig(name);
@@ -290,10 +294,6 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
         }
 
         JsonObject vars = new JsonObject()
-            .put("ALL_CIPHER_SUITES", ALL_CIPHER_SUITES.toString())
-            .put("ALL_TLS_VERSIONS", ALL_TLS_VERSIONS.toString())
-            .put("ALL_SERVLET_TYPES", ALL_SERVLET_TYPES.toString())
-            .put("DEFAULT_SERVLET_CONFIGS", DEFAULT_SERVLET_CONFIGS.toString())
             .put("section", section)
             .put("name", routerName)
             .put("type", routerType)
@@ -330,7 +330,7 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
     @HttpEndpoint(path = "/router/:name/:section", allowedMethods = {
             HttpMethod.POST
     }, preprocessor = AuthPreprocessor.class)
-    public HttpResponse onUpdateConfigPage(HttpSession session, EndpointData<AuthorizedUser> data) throws IOException {
+    public HttpResponse onUpdateRouterSection(HttpSession session, EndpointData<AuthorizedUser> data) throws IOException {
         String routerName = data.uriParameters().get("name");
         String section = data.uriParameters().get("section");
 
