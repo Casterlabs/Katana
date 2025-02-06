@@ -36,7 +36,6 @@ import co.casterlabs.rakurai.json.element.JsonObject;
 import co.casterlabs.rakurai.json.serialization.JsonParseException;
 import co.casterlabs.rakurai.json.validation.JsonValidate;
 import co.casterlabs.rakurai.json.validation.JsonValidationException;
-import co.casterlabs.rhs.HttpMethod;
 import co.casterlabs.rhs.HttpStatus;
 import co.casterlabs.rhs.HttpStatus.StandardHttpStatus;
 import co.casterlabs.rhs.protocol.HeaderValue;
@@ -59,6 +58,7 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import okhttp3.internal.http.HttpMethod;
 import okio.BufferedSink;
 import okio.Okio;
 import xyz.e3ndr.fastloggingframework.logging.FastLogger;
@@ -253,8 +253,7 @@ public class ProxyServlet extends HttpServlet {
         Request.Builder builder = new Request.Builder().url(url);
 
         RequestBody body = null;
-
-        if (session.body().present() && session.method() != HttpMethod.GET) {
+        if (session.body().present()) {
             body = new RequestBody() {
                 @Override
                 public MediaType contentType() {
@@ -271,6 +270,12 @@ public class ProxyServlet extends HttpServlet {
                     sink.writeAll(Okio.source(session.body().stream()));
                 }
             };
+        }
+
+        if (HttpMethod.requiresRequestBody(session.rawMethod()) && body == null) {
+            body = RequestBody.create(new byte[0], null);
+        } else if (!HttpMethod.permitsRequestBody(session.rawMethod())) {
+            body = null;
         }
 
         builder.method(session.rawMethod(), body);
