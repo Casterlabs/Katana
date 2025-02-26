@@ -7,6 +7,8 @@
 	<version>PLACEHOLDER</version>
 
 	<properties>
+		<commons.version>1.9.0</commons.version>
+		<rhs.version>2459ff7</rhs.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
@@ -116,25 +118,25 @@
 		<dependency>
 			<groupId>co.casterlabs.rakurai-http-server</groupId>
 			<artifactId>core</artifactId>
-			<version>e060139</version>
+			<version>${rhs.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.rakurai-http-server.proto</groupId>
 			<artifactId>http</artifactId>
-			<version>e060139</version>
+			<version>${rhs.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.rakurai-http-server.proto</groupId>
 			<artifactId>websocket</artifactId>
-			<version>e060139</version>
+			<version>${rhs.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.rakurai-http-server.proto</groupId>
 			<artifactId>api-framework</artifactId>
-			<version>e060139</version>
+			<version>${rhs.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
@@ -172,7 +174,7 @@
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>websocket</artifactId>
-			<version>4ec2972</version>
+			<version>${commons.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<!-- <dependency>
@@ -206,19 +208,19 @@
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>async</artifactId>
-			<version>d4647a1</version>
+			<version>${commons.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>functional</artifactId>
-			<version>d4647a1</version>
+			<version>${commons.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>co.casterlabs.commons</groupId>
 			<artifactId>io</artifactId>
-			<version>d4647a1</version>
+			<version>${commons.version}</version>
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
