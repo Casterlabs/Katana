@@ -170,7 +170,7 @@ public class HttpRouter implements HttpProtoHandler, WebsocketHandler, KatanaRou
         this.loadConfig(this.config);
     }
 
-    private void autoIssueCertificates() throws IssuanceException {
+    public void autoIssueCertificates() throws IssuanceException {
         if (this.autoIssuer == null) return;
         Set<String> frontFacing = this.config.getAllFrontFacingDomains();
         frontFacing.remove("*"); // This won't work :P

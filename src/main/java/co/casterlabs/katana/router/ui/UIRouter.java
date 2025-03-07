@@ -12,9 +12,11 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import co.casterlabs.commons.io.streams.StreamUtil;
+import co.casterlabs.katana.CertificateAutoIssuer.IssuanceException;
 import co.casterlabs.katana.Katana;
 import co.casterlabs.katana.Util;
 import co.casterlabs.katana.router.KatanaRouter;
+import co.casterlabs.katana.router.http.HttpRouter;
 import co.casterlabs.katana.router.http.RakuraiTaskExecutor;
 import co.casterlabs.katana.router.http.servlets.HttpServlet;
 import co.casterlabs.katana.router.ui.AuthPreprocessor.AuthorizedUser;
@@ -322,6 +324,19 @@ public class UIRouter implements KatanaRouter<UIRouterConfiguration>, EndpointPr
         }
 
         Files.write(Katana.CONFIG_FILE.toPath(), newConfig.toString(true).getBytes(StandardCharsets.UTF_8));
+
+        return HttpResponse.newFixedLengthResponse(StandardHttpStatus.SEE_OTHER)
+            .header("Location", "/");
+    }
+
+    @HttpEndpoint(path = "/router/:name/_reissue", priority = 100, allowedMethods = {
+            HttpMethod.POST
+    }, preprocessor = AuthPreprocessor.class)
+    public HttpResponse onReissueCertsForRouter(HttpSession session, EndpointData<AuthorizedUser> data) throws IOException, IssuanceException {
+        String routerName = data.uriParameters().get("name");
+
+        HttpRouter router = (HttpRouter) Katana.getInstance().getRouters().get(routerName);
+        router.autoIssueCertificates();
 
         return HttpResponse.newFixedLengthResponse(StandardHttpStatus.SEE_OTHER)
             .header("Location", "/");
